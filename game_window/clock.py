@@ -2,8 +2,28 @@ import pygame
 from datetime import datetime
 from pygame_helper_classes import Label
 
-
 class Clock:
+    """
+    A class for displaying a digital clock on a Pygame screen.
+
+    Attributes:
+        x_position (int): The x-coordinate position of the clock on the screen.
+        y_position (int): The y-coordinate position of the clock on the screen.
+        text_color (str): The color of the clock's text. Default is "black".
+        border_color (str): The color of the clock's border. Default is "black".
+        bg_color (str): The background color of the clock. Default is "darkGray".
+
+    Constants:
+        COLOR_MAP (dict): A dictionary mapping color names to RGB values.
+
+    Methods:
+        display(screen): Display the clock on the Pygame screen.
+
+    Example:
+        clock_instance = Clock(10, 10, text_color="lightRed", border_color="darkRed", bg_color="lightGray")
+        clock_instance.display(screen)
+    """
+
     COLOR_MAP = {
         "darkGreen": (0, 100, 0),
         "green": (0, 128, 0),
@@ -17,6 +37,16 @@ class Clock:
     }
 
     def __init__(self, x=10, y=10, text_color="black", border_color="black", bg_color="darkGray"):
+        """
+        Initialize a Clock instance.
+
+        Args:
+            x (int, optional): The x-coordinate position of the clock. Default is 10.
+            y (int, optional): The y-coordinate position of the clock. Default is 10.
+            text_color (str, optional): The color of the clock's text. Default is "black".
+            border_color (str, optional): The color of the clock's border. Default is "black".
+            bg_color (str, optional): The background color of the clock. Default is "darkGray".
+        """
         self.x_position = x
         self.y_position = y
 
@@ -26,6 +56,12 @@ class Clock:
         self.bg_rgb = self.COLOR_MAP.get(bg_color, self.COLOR_MAP["lightGray"])
 
     def display(self, screen):
+        """
+        Display the clock on the Pygame screen.
+
+        Args:
+            screen (pygame.Surface): The Pygame surface where the clock will be displayed.
+        """
         current_time = datetime.now().strftime('%I:%M:%S %p')
         font = pygame.font.Font(None, 36)
 
@@ -60,7 +96,6 @@ class Clock:
 
         # No need to reset x_position for the next frame since we always refer to the initial start_x_position
 
-
 if __name__ == "__main__":
     pygame.init()
 
@@ -71,7 +106,6 @@ if __name__ == "__main__":
     pygame.display.set_caption('Clock Demo')
 
     clock_instance = Clock(10, 10, text_color="lightRed", border_color="darkRed", bg_color="lightGray")
-
 
     running = True
     while running:
