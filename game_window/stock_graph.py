@@ -80,6 +80,13 @@ class Graph:
                 prev_x_pos = x_pos
                 prev_y_pos = y_pos
 
+        self.rect = pygame.Rect(self.x_position - 5, self.y_position - 5, max_width + 10, max_height + 10)
+
+
+    def update_position(self, dx, dy):
+        self.x += dx
+        self.y += dy
+
 
 if __name__ == "__main__":
     pygame.init()

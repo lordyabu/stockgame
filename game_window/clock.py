@@ -94,6 +94,10 @@ class Clock:
         # Draw the border rectangle
         pygame.draw.rect(screen, self.border_rgb, (start_x_position - 5, self.y_position - 5, max_width + 10, max_height + 10), 2)
 
+    def update_position(self, dx, dy):
+        self.x_position += dx
+        self.y_position += dy
+
         # No need to reset x_position for the next frame since we always refer to the initial start_x_position
 
 if __name__ == "__main__":

@@ -3,7 +3,6 @@ class Label:
         self.image = font.render(text, 1, color)
         self.rect = self.image.get_rect()
         setattr(self.rect, anchor, position)
-        # print(self.rect)  <-- Remove or comment out this line
 
     def draw(self, surface):
         surface.blit(self.image, self.rect)
