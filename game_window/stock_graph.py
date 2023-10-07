@@ -10,52 +10,26 @@ WIDTH, HEIGHT = 800, 600
 
 class Graph:
     current_x_offset = 0  # Class variable to track x-offset for new graphs
-    aux_graph_count = 0  # Class variable to track the number of auxiliary graphs
     spacing = 20  # Space between each graph
     MARGIN = 10  # Margin for all sides
 
-    def __init__(self, is_main=True, is_live=False, data_file=None, size_multiplier=1.0, y_offset_percentage=0.6):
+    def __init__(self, is_live=False, data_file=None, size_multiplier=1.0, y_offset_percentage=0.6):
         global HEIGHT
-        self.is_main = is_main
         self.is_live = is_live
 
         # Load data if data_file is provided
         self.df = pd.read_csv(data_file) if data_file else None
 
-        if self.is_main:
-            # Base size
-            base_width = WIDTH * 0.5
-            base_height = HEIGHT * 0.5
+        # Define size
+        self.width = (WIDTH - 2 * Graph.MARGIN) * 0.5 * size_multiplier
+        self.height = (HEIGHT - 2 * Graph.MARGIN) * 0.5 * size_multiplier
 
-            self.width = (WIDTH - 2 * Graph.MARGIN) * 0.5 * size_multiplier
-            self.height = (HEIGHT - 2 * Graph.MARGIN) * 0.5 * size_multiplier
+        # x and y position adjusted for margin and spacing
+        self.x = Graph.current_x_offset + Graph.MARGIN
+        self.y = HEIGHT * y_offset_percentage - self.height * 0.5
 
-            # x and y position adjusted for margin
-            self.x = Graph.MARGIN
-            self.y = HEIGHT * y_offset_percentage - self.height * 0.5
-
-        else:
-
-            # For side graph
-
-            Graph.aux_graph_count += 1
-
-            if Graph.aux_graph_count % 2 == 1:
-                HEIGHT += 300
-
-            # Define size and position of the side graph
-
-            self.width = (WIDTH - 2 * Graph.MARGIN) * 0.5
-            self.height = 280 - 2 * Graph.MARGIN  # Subtracting margin from height
-
-            # The x position is set based on the class variable, so subsequent graphs appear to the right, also adjusted for margin
-            self.x = Graph.current_x_offset + Graph.MARGIN
-
-            # Set y position for the side graph to position the bottom edge of the graph at the bottom of the screen, also adjusted for margin.
-            self.y = HEIGHT - self.height - Graph.MARGIN
-
-            # Increase the offset for next graphs by width + spacing
-            Graph.current_x_offset += self.width + Graph.spacing
+        # Increase the offset for next graphs by width + spacing
+        Graph.current_x_offset += self.width + Graph.spacing
 
     def display(self, screen):
         pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, self.width, self.height), 2)
@@ -80,8 +54,7 @@ class Graph:
                 prev_x_pos = x_pos
                 prev_y_pos = y_pos
 
-        self.rect = pygame.Rect(self.x_position - 5, self.y_position - 5, max_width + 10, max_height + 10)
-
+        self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
 
     def update_position(self, dx, dy):
         self.x += dx

@@ -36,7 +36,7 @@ class Clock:
         "black": (0, 0, 0)
     }
 
-    def __init__(self, x=10, y=10, text_color="black", border_color="black", bg_color="darkGray"):
+    def __init__(self, x=10, y=10, width=None, height=None, text_color="black", border_color="black", bg_color="darkGray"):
         """
         Initialize a Clock instance.
 
@@ -50,10 +50,14 @@ class Clock:
         self.x_position = x
         self.y_position = y
 
+        self.width = width
+        self.height = height
+
         # Set colors using the provided strings and the COLOR_MAP
         self.text_rgb = self.COLOR_MAP.get(text_color, self.COLOR_MAP["green"])
         self.border_rgb = self.COLOR_MAP.get(border_color, self.COLOR_MAP["darkGreen"])
         self.bg_rgb = self.COLOR_MAP.get(bg_color, self.COLOR_MAP["lightGray"])
+        self.rect = pygame.Rect(self.x_position, self.y_position, self.width, self.height)
 
     def display(self, screen):
         """
@@ -95,10 +99,15 @@ class Clock:
         pygame.draw.rect(screen, self.border_rgb, (start_x_position - 5, self.y_position - 5, max_width + 10, max_height + 10), 2)
 
     def update_position(self, dx, dy):
-        self.x_position += dx
-        self.y_position += dy
+        self.x_position += dx  # Corrected from self.x
+        self.y_position += dy  # Corrected from self.y
+        self.rect.topleft = (self.x_position, self.y_position)
 
-        # No need to reset x_position for the next frame since we always refer to the initial start_x_position
+    def resize(self, new_width, new_height):
+        self.width = new_width
+        self.height = new_height
+        self.rect.size = (self.width, self.height)
+
 
 if __name__ == "__main__":
     pygame.init()
