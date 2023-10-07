@@ -1,16 +1,16 @@
 import json
 import pygame
-from clock import Clock
-from stock_graph import Graph
-from menuObjects.switch_button import SwitchButton
-from menuObjects.menu import Menu
-from menuObjects.menu_button import MenuButton
-def save_preset(projections, filename='preset.json'):
+from core.clock import Clock
+from core.graph import Graph
+from menu.switch_button import SwitchButton
+from menu.main_menu import Menu
+from menu.menu_button import MenuButton
+def save_preset(projections, filename='presets/preset.json'):
     with open(filename, 'w') as f:
         json.dump([proj.serialize() for proj in projections], f)
 
 
-def load_preset(filename='preset.json'):
+def load_preset(filename='presets/preset.json'):
     Graph.current_x_offset = 0  # Reset the offset
     with open(filename, 'r') as f:
         data = json.load(f)

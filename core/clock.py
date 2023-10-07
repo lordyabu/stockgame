@@ -1,6 +1,6 @@
 import pygame
 from datetime import datetime
-from pygame_helper_classes import Label
+from utils.pygame_helper_classes import Label
 
 class Clock:
     """
@@ -115,7 +115,7 @@ class Clock:
             'y': self.y_position,
             'width': self.width,
             'height': self.height,
-            # ... any other properties you need
+            # ...
         }
 
 
