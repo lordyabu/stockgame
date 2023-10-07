@@ -13,23 +13,33 @@ class Graph:
     spacing = 20  # Space between each graph
     MARGIN = 10  # Margin for all sides
 
-    def __init__(self, is_live=False, data_file=None, size_multiplier=1.0, y_offset_percentage=0.6):
+    def __init__(self, is_live=False, data_file=None, size_multiplier=1.0, y_offset_percentage=0.6,
+                 x=None, y=None, width=None, height=None):
         global HEIGHT
         self.is_live = is_live
-
+        self.size_multiplier = size_multiplier
         # Load data if data_file is provided
         self.df = pd.read_csv(data_file) if data_file else None
+        self.df_path = data_file
 
-        # Define size
-        self.width = (WIDTH - 2 * Graph.MARGIN) * 0.5 * size_multiplier
-        self.height = (HEIGHT - 2 * Graph.MARGIN) * 0.5 * size_multiplier
+        if x is None or y is None or width is None or height is None:
+            # Define size only if not provided
+            self.width = (WIDTH - 2 * Graph.MARGIN) * 0.5 * size_multiplier
+            self.height = (HEIGHT - 2 * Graph.MARGIN) * 0.5 * size_multiplier
 
-        # x and y position adjusted for margin and spacing
-        self.x = Graph.current_x_offset + Graph.MARGIN
-        self.y = HEIGHT * y_offset_percentage - self.height * 0.5
+            # x and y position adjusted for margin and spacing
+            self.x = Graph.current_x_offset + Graph.MARGIN
+            self.y = HEIGHT * y_offset_percentage - self.height * 0.5
 
-        # Increase the offset for next graphs by width + spacing
-        Graph.current_x_offset += self.width + Graph.spacing
+            # Increase the offset for next graphs by width + spacing
+            Graph.current_x_offset += self.width + Graph.spacing
+        else:
+            self.x = x
+            self.y = y
+            self.width = width
+            self.height = height
+
+        self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
 
     def display(self, screen):
         pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, self.width, self.height), 2)
@@ -59,6 +69,17 @@ class Graph:
     def update_position(self, dx, dy):
         self.x += dx
         self.y += dy
+
+    def serialize(self):
+        return {
+            'type': 'Graph',
+            'x': self.x,
+            'y': self.y,
+            'width': self.width,
+            'height': self.height,
+            'data_file': self.df_path,
+            'size_multiplier': self.size_multiplier
+        }
 
 
 if __name__ == "__main__":

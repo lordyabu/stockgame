@@ -9,11 +9,29 @@ class MenuButton:
 
     def display(self, screen):
         pygame.draw.rect(screen, (100, 100, 100), self.rect)  # Drawing a gray button
+
         text_surf = self.font.render(self.text, True, (0, 0, 0))  # Black text
-        screen.blit(text_surf, (self.x + 10, self.y + 5))  # Adjust the x and y values as needed
+
+        # Compute position relative to the rect's position
+        text_x = self.rect.x + (self.rect.width - text_surf.get_width()) // 2
+        text_y = self.rect.y + (self.rect.height - text_surf.get_height()) // 2
+
+        screen.blit(text_surf, (text_x, text_y))
 
     def update_position(self, dx, dy):
         # In case you want to move the button around:
         self.x += dx
         self.y += dy
         self.rect.topleft = (self.x, self.y)
+
+
+
+    def serialize(self):
+        return {
+            "type": "MenuButton",
+            "x": self.rect.x,
+            "y": self.rect.y,
+            "width": self.rect.width,
+            "height": self.rect.height,
+            "text": self.text
+        }

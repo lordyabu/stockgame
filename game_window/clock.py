@@ -108,6 +108,16 @@ class Clock:
         self.height = new_height
         self.rect.size = (self.width, self.height)
 
+    def serialize(self):
+        return {
+            'type': 'Clock',
+            'x': self.x_position,
+            'y': self.y_position,
+            'width': self.width,
+            'height': self.height,
+            # ... any other properties you need
+        }
+
 
 if __name__ == "__main__":
     pygame.init()
