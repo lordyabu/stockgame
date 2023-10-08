@@ -32,7 +32,7 @@ class Slider(Observable):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1 and self.rect.collidepoint(event.pos):  # Left click
                 self.update_value_from_pos(event.pos[0])
-                self.notify_observers(self.value)
+                self.notify_observers(self.current_value)
             elif event.button == 3 and self.rect.collidepoint(event.pos):  # Right click
                 self.dragging = True
         elif event.type == pygame.MOUSEBUTTONUP:
@@ -48,6 +48,13 @@ class Slider(Observable):
 
     def is_clicked(self, x, y):
         return self.rect.collidepoint(x, y)
+
+    def update_value_from_pos(self, x):
+        relative_x = x - self.x
+        self.current_value = self.min_value + relative_x / (self.width - self.handle_width) * (self.max_value - self.min_value)
+        self.current_value = max(self.min_value, min(self.max_value, self.current_value))
+        self.notify_observers(self.current_value)
+
 
 
 
