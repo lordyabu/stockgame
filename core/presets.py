@@ -19,8 +19,16 @@ def load_preset(filename='presets/preset.json'):
     for proj_data in data:
         if proj_data['type'] == 'Graph':
             projections.append(
-                Graph(x=proj_data['x'], y=proj_data['y'], width=proj_data['width'], height=proj_data['height'],
-                      data_file=proj_data['data_file'], size_multiplier=proj_data.get('size_multiplier', 1.0)))
+                Graph(
+                    x=proj_data['x'],
+                    y=proj_data['y'],
+                    width=proj_data['width'],
+                    height=proj_data['height'],
+                    data_file=proj_data['data_file'],
+                    size_multiplier=proj_data.get('size_multiplier', 1.0),
+                    column=proj_data['column']  # include the column attribute here
+                )
+            )
 
         elif proj_data['type'] == 'Clock':
             projections.append(

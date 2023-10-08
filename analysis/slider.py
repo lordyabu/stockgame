@@ -18,34 +18,36 @@ class Slider(Observable):
 
         # Additional attribute to check if the handle is being dragged
         self.dragging = False
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)  # Assuming slider_height is the height of your slider.
+
 
     def display(self, screen):
+        self.rect.topleft = (self.x, self.y)
         pygame.draw.rect(screen, self.track_color, (self.x, self.y, self.width, self.height))
         handle_x = self.x + (self.current_value - self.min_value) / (self.max_value - self.min_value) * (
                     self.width - self.handle_width)
         pygame.draw.rect(screen, self.handle_color, (handle_x, self.y, self.handle_width, self.height))
 
     def handle_events(self, event):
-        handle_x = self.x + (self.current_value - self.min_value) / (self.max_value - self.min_value) * (
-                self.width - self.handle_width)
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                # Check if the click is within the handle's boundaries
-                if handle_x <= event.pos[0] <= handle_x + self.handle_width and self.y <= event.pos[
-                    1] <= self.y + self.height:
-                    self.dragging = True
+            if event.button == 1 and self.rect.collidepoint(event.pos):  # Left click
+                self.update_value_from_pos(event.pos[0])
+                self.notify_observers(self.value)
+            elif event.button == 3 and self.rect.collidepoint(event.pos):  # Right click
+                self.dragging = True
         elif event.type == pygame.MOUSEBUTTONUP:
-            if event.button == 1:
+            if event.button == 3:
                 self.dragging = False
-        elif event.type == pygame.MOUSEMOTION:
-            if self.dragging:
-                rel_x = event.pos[0] - self.x
-                self.current_value = (rel_x / self.width) * (self.max_value - self.min_value) + self.min_value
-                self.current_value = max(min(self.current_value, self.max_value), self.min_value)
+        elif event.type == pygame.MOUSEMOTION and self.dragging:  # Dragging with right-click
+            self.update_position(event.rel[0], event.rel[1])
 
-                # Notify observers about the change
-                self.notify_observers(self.current_value)
+    def update_position(self, dx, dy):
+        self.x += dx
+        self.y += dy
 
+
+    def is_clicked(self, x, y):
+        return self.rect.collidepoint(x, y)
 
 
 
@@ -57,15 +59,16 @@ WIDTH, HEIGHT = 800, 600
 
 if __name__ == "__main__":
     pygame.init()
+    pygame.font.init()
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption('Graph Test')
-
+    pygame.display.set_caption('Graph Test with Slider')
 
     # Instantiate graph and make it observe the slider
-    test_graph = Graph(data_file='./data/PriceDay.csv')  # Replace with the correct path if needed
-    if test_graph.df is not None:
-        slider_max_value = len(test_graph.df) - 1
+    test_graph = Graph(data_file='./data/PriceDay1.csv')  # Replace with the correct path if needed
+
+    if test_graph.df is not None and test_graph.column in test_graph.df.columns:
+        slider_max_value = len(test_graph.df[test_graph.column]) - 1
     else:
         slider_max_value = 100  # Default value if the DataFrame is not available.
 
@@ -85,4 +88,3 @@ if __name__ == "__main__":
         pygame.display.flip()
 
     pygame.quit()
-

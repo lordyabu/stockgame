@@ -5,27 +5,47 @@ from menu.switch_button import SwitchButton
 from menu.main_menu import Menu
 from menu.menu_button import MenuButton
 from core.presets import save_preset, load_preset
+from analysis.slider import Slider
+from analysis.table import DataTable
+
 
 # Pygame Initialization
 pygame.init()
 GLOBAL_LOCK = False
 WHITE = (255, 255, 255)
 WIDTH, HEIGHT = 800, 600
-# Initial window dimensions
 screen = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
 pygame.display.set_caption("Resizable Window with Clock and Graphs")
+
 
 def initialize_projections():
     object_configs = [
         {"class": Clock, "args": (10, 10, 100, 50), "kwargs": {"text_color": "black", "border_color": "black", "bg_color": "darkGray"}},
-        {"class": Graph, "kwargs": {"is_live": False, "data_file": './data/PriceDay.csv', "size_multiplier": 1.5}},
-        {"class": Graph, "kwargs": {"is_live": False, "data_file": './data/PriceDay2.csv', "size_multiplier": .9}},
-        {"class": Graph, "kwargs": {"is_live": False, "data_file": './data/PriceDay3.csv', "size_multiplier": .9}}
+        {"class": Graph,
+         "kwargs": {"is_live": False, "data_file": './data/PriceDay1.csv', "column": 'Price', "size_multiplier": 1.5}},
+        {"class": Graph,
+         "kwargs": {"is_live": False, "data_file": './data/PriceDay2.csv', "column": 'Price', "size_multiplier": .9}},
+        {"class": Graph,
+         "kwargs": {"is_live": False, "data_file": './data/PriceDay3.csv', "column": 'Price', "size_multiplier": .9}}
     ]
 
     return [config["class"](*config.get("args", ()), **config["kwargs"]) for config in object_configs]
 
+
 projections = initialize_projections()
+graphs = [proj for proj in projections if isinstance(proj, Graph)]
+max_length = max([len(graph.df) for graph in graphs if graph.df is not None], default=100)
+
+slider = Slider(50, 450, 700, 0, max_length - 1)
+projections.append(slider)  # Add slider to projections
+
+font = pygame.font.SysFont(None, 24)
+data_table = DataTable(650, 50, graphs, font)
+projections.append(data_table)  # Add data table to projections
+
+for graph in graphs:
+    slider.add_observer(graph)
+slider.add_observer(data_table)
 
 menu_button = MenuButton(700, 10, 80, 40, "Menu")
 menu = Menu(700, 60)
@@ -91,19 +111,15 @@ while running:
             func = getattr(dragged_object, funcs.get(event.key, None), None)
             if func:
                 func()
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_t:
-                main_graph.set_current_time('SomeTimeStampFromYourData')  # Replace 'SomeTimeStampFromYourData' with a valid timestamp from your data
 
+        slider.handle_events(event)
 
     screen.fill(WHITE)
-    # Draw projections first
     for proj in projections:
-        if not isinstance(proj, (Menu, MenuButton)):  # Not drawing Menu and MenuButton yet
+        if not isinstance(proj, (Menu, MenuButton)):
             proj.display(screen)
     menu_button.display(screen)
     menu.display(screen)
-
     pygame.display.flip()
 
 pygame.quit()
