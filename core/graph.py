@@ -3,8 +3,8 @@ import pandas as pd
 from core.clock import Clock
 from utils.observer_pattern import Observer
 from utils.uiux import UIElement
-from analysis.slider import Slider
-from analysis.table import DataTable
+# from analysis.slider import Slider
+# from analysis.table import DataTable
 # Colors
 WHITE = (255, 255, 255)
 
@@ -52,7 +52,8 @@ class Graph(UIElement, Observer):
             width (int, optional): The width of the graph. Default is None.
             height (int, optional): The height of the graph. Default is None.
         """
-        super().__init__(x, y)
+        UIElement.__init__(self, x, y)
+        Observer.__init__(self)
         self.is_live = is_live
         self.size_multiplier = size_multiplier
         try:
