@@ -78,4 +78,28 @@ class SwitchButton:
             "is_on": self.is_on,
             "text_on": self.text_on,
             "text_off": self.text_off
-        }
+
+    }
+
+
+    @staticmethod
+    def deserialize(data):
+        """
+        Create a SwitchButton instance from serialized data.
+
+        Args:
+            data (dict): The serialized state of the button.
+
+        Returns:
+            SwitchButton: A new instance of SwitchButton constructed from the serialized data.
+        """
+        switch_button = SwitchButton(
+            x=data["x"],
+            y=data["y"],
+            width=data["width"],
+            height=data["height"],
+            text_on=data.get("text_on", "Locked"),  # Default to "Locked" if not present
+            text_off=data.get("text_off", "Unlocked")  # Default to "Unlocked" if not present
+        )
+        switch_button.is_on = data.get("is_on", False)  # Default to off (False) if not present
+        return switch_button

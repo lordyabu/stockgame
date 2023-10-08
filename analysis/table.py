@@ -10,12 +10,19 @@ WHITE = (255, 255, 255)
 WIDTH, HEIGHT = 800, 600
 
 class DataTable(Observer):
-    def __init__(self, x, y, graphs, font):
+    def __init__(self, x, y, graphs, font, initial_index=0):
         self.x = x
         self.y = y
         self.graphs = graphs  # A list of graphs
         self.font = font
         self.current_values = {}
+
+        # Define the rectangle to represent the position and size
+        self.width = 150  # Adjust this value based on your needs
+        self.height = len(graphs) * 20 + 20  # 20 pixel gap between each value, adjust this if necessary
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+        self.set_values(initial_index)
 
     def set_values(self, index):
         self.current_values.clear()  # Clear any previous values
@@ -38,7 +45,24 @@ class DataTable(Observer):
         # Set the values to display based on the slider's value.
         self.set_values(int(value))
 
+    def update_position(self, dx, dy):
+        self.x += dx
+        self.y += dy
+        self.rect.topleft = (self.x, self.y)  # Update the rect's position as well
 
+
+    def serialize(self):
+        # Here, we only serialize the position of the DataTable, as other attributes can be reconstructed
+        return {
+            "type": "DataTable",
+            "x": self.x,
+            "y": self.y
+        }
+
+    @staticmethod
+    def deserialize(data, graphs, font):
+        table = DataTable(data["x"], data["y"], graphs, font)
+        return table
 
 if __name__ == "__main__":
     pygame.init()

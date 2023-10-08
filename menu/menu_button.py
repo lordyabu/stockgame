@@ -84,3 +84,22 @@ class MenuButton:
             "height": self.rect.height,
             "text": self.text
         }
+
+    @staticmethod
+    def deserialize(data):
+        """
+        Create a MenuButton instance from serialized data.
+
+        Args:
+            data (dict): The serialized state of the button.
+
+        Returns:
+            MenuButton: A new instance of MenuButton constructed from the serialized data.
+        """
+        return MenuButton(
+            x=data["x"],
+            y=data["y"],
+            width=data["width"],
+            height=data["height"],
+            text=data["text"]
+        )

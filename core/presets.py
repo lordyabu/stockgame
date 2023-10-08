@@ -5,55 +5,70 @@ from core.graph import Graph
 from menu.switch_button import SwitchButton
 from menu.main_menu import Menu
 from menu.menu_button import MenuButton
+from analysis.slider import Slider
+from analysis.table import DataTable
 def save_preset(projections, filename='presets/preset.json'):
     with open(filename, 'w') as f:
         json.dump([proj.serialize() for proj in projections], f)
 
 
-def load_preset(filename='presets/preset.json'):
+def load_preset(filename='presets/preset.json', font=None):
     Graph.current_x_offset = 0  # Reset the offset
     with open(filename, 'r') as f:
         data = json.load(f)
 
     projections = []
+    loaded_slider = None  # Initialize loaded_slider
+    loaded_graphs = []
+
     for proj_data in data:
         if proj_data['type'] == 'Graph':
-            projections.append(
-                Graph(
-                    x=proj_data['x'],
-                    y=proj_data['y'],
-                    width=proj_data['width'],
-                    height=proj_data['height'],
-                    data_file=proj_data['data_file'],
-                    size_multiplier=proj_data.get('size_multiplier', 1.0),
-                    column=proj_data['column']  # include the column attribute here
-                )
+            graph = Graph(
+                x=proj_data['x'],
+                y=proj_data['y'],
+                width=proj_data['width'],
+                height=proj_data['height'],
+                data_file=proj_data['data_file'],
+                size_multiplier=proj_data.get('size_multiplier', 1.0),
+                column=proj_data['column']
             )
+            projections.append(graph)
+            loaded_graphs.append(graph)
 
-        elif proj_data['type'] == 'Clock':
-            projections.append(
-                Clock(x=proj_data['x'], y=proj_data['y'], width=proj_data.get('width'), height=proj_data.get('height')))
+        elif proj_data['type'] == 'Slider':
+            loaded_slider = Slider.deserialize(proj_data)
+            projections.append(loaded_slider)
 
         elif proj_data['type'] == 'MenuButton':
-            projections.append(
-                MenuButton(proj_data["x"], proj_data["y"], proj_data["width"], proj_data["height"], proj_data["text"]))
+            projections.append(MenuButton.deserialize(proj_data))
+
+        elif proj_data['type'] == 'SwitchButton':
+            projections.append(SwitchButton.deserialize(proj_data))
 
         elif proj_data['type'] == 'Menu':
-            menu = Menu(proj_data['x'], proj_data['y'])
-            menu.is_active = proj_data['is_active']
-            for child_data in proj_data.get('children', []):
-                if child_data['type'] == 'SwitchButton':
-                    switch_btn = SwitchButton(child_data['x'], child_data['y'], child_data['width'],
-                                              child_data['height'], child_data['text_on'], child_data['text_off'])
-                    switch_btn.is_on = child_data['is_on']
-                    menu.lock_button = switch_btn
-                elif child_data['type'] == 'MenuButton':
-                    if child_data['text'] == 'Save':
-                        menu.save_button = MenuButton(child_data["x"], child_data["y"], child_data["width"],
-                                                      child_data["height"], child_data["text"])
-                    elif child_data['text'] == 'Load':
-                        menu.load_button = MenuButton(child_data["x"], child_data["y"], child_data["width"],
-                                                      child_data["height"], child_data["text"])
-            projections.append(menu)
+            loaded_menu = Menu.deserialize(proj_data)
+            projections.append(loaded_menu)
+
+    if font is None:
+        font = pygame.font.SysFont(None, 24)  # Or any default you'd like
+
+    for proj_data in data:
+        if proj_data['type'] == 'DataTable':
+            loaded_data_table = DataTable.deserialize(proj_data, loaded_graphs, font)
+            projections.append(loaded_data_table)
+
+    if loaded_slider:
+        # Re-establish the slider's interaction with graphs and data table
+        loaded_graphs = [proj for proj in projections if isinstance(proj, Graph)]
+        loaded_data_table = next((proj for proj in projections if isinstance(proj, DataTable)), None)
+
+        for graph in loaded_graphs:
+            loaded_slider.add_observer(graph)
+
+        if loaded_data_table:
+            loaded_slider.add_observer(loaded_data_table)
+
+        # Ensure that the slider's current_value is within its range
+        loaded_slider.current_value = max(loaded_slider.min_value, min(loaded_slider.max_value, loaded_slider.current_value))
 
     return projections

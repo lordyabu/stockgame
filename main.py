@@ -54,6 +54,7 @@ projections.extend([menu_button, menu])
 dragging = False
 dragged_object = None
 
+
 running = True
 while running:
     for event in pygame.event.get():
@@ -84,10 +85,19 @@ while running:
                 # Clear the current projections
                 projections.clear()
 
-                # Retrieve the last known positions of the Menu and MenuButton from the loaded projections
-                menu_button_position = next((proj for proj in loaded_projections if isinstance(proj, MenuButton)),
-                                            None).rect.topleft
-                menu_position = next((proj for proj in loaded_projections if isinstance(proj, Menu)), None).rect.topleft
+                menu_button_proj = next((proj for proj in loaded_projections if isinstance(proj, MenuButton)), None)
+                if menu_button_proj:
+                    menu_button_position = menu_button_proj.rect.topleft
+                else:
+                    # Handle this case accordingly, maybe set a default position or raise a more descriptive error.
+                    menu_button_position = (0, 0)
+
+                menu_proj = next((proj for proj in loaded_projections if isinstance(proj, Menu)), None)
+                if menu_proj:
+                    menu_position = menu_proj.rect.topleft
+                else:
+                    # Handle this case accordingly, maybe set a default position or raise a more descriptive error.
+                    menu_position = (0, 0)
 
                 # Ensure only one Menu and MenuButton instance exists and append them to the projections
                 menu_button = MenuButton(*menu_button_position, 80, 40, "Menu")
@@ -98,21 +108,48 @@ while running:
                 for proj in loaded_projections:
                     if not isinstance(proj, (Menu, MenuButton)):
                         projections.append(proj)
+
+                # Re-establish the slider's interaction with graphs and data table
+                loaded_slider = next((proj for proj in projections if isinstance(proj, Slider)), None)
+                loaded_graphs = [proj for proj in projections if isinstance(proj, Graph)]
+                # Re-establish the slider's interaction with graphs and data table
+                loaded_slider = next((proj for proj in projections if isinstance(proj, Slider)), None)
+                loaded_graphs = [proj for proj in projections if isinstance(proj, Graph)]
+                loaded_data_table = next((proj for proj in projections if isinstance(proj, DataTable)), None)
+
+                # Re-connect slider to its observers (graphs and data table)
+                if loaded_slider:
+                    for graph in loaded_graphs:
+                        loaded_slider.add_observer(graph)
+                    if loaded_data_table:
+                        loaded_slider.add_observer(loaded_data_table)
+
+            if not GLOBAL_LOCK:
+                dragged_object = next((proj for proj in projections if
+                                       proj.rect.collidepoint(event.pos) and hasattr(proj, 'update_position')),
+                                      None)
+                dragging = dragged_object is not None
+
         elif event.type == pygame.MOUSEBUTTONUP:
             dragging = False
+            dragged_object = None  # Clear the dragged object
+
         elif event.type == pygame.MOUSEMOTION and dragging:
             if isinstance(dragged_object, MenuButton):
                 dragged_object.update_position(*event.rel)
                 menu.update_position(dragged_object.x, dragged_object.y + dragged_object.height)
             else:
                 dragged_object.update_position(*event.rel)
+
         elif event.type == pygame.KEYDOWN and dragged_object:
             funcs = {pygame.K_PLUS: "increase_size", pygame.K_MINUS: "decrease_size"}
             func = getattr(dragged_object, funcs.get(event.key, None), None)
             if func:
                 func()
 
-        slider.handle_events(event)
+        for proj in projections:
+            if isinstance(proj, Slider):
+                proj.handle_events(event)
 
     screen.fill(WHITE)
     for proj in projections:

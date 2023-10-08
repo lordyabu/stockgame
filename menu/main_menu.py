@@ -75,10 +75,10 @@ class Menu:
 
     def serialize(self):
         """
-        Convert the menu object into a serializable dictionary.
+        Serialize the state of the menu into a dictionary.
 
         Returns:
-            dict: The dictionary representation of the menu.
+            dict: A dictionary containing the serialized state of the menu.
         """
         return {
             "type": "Menu",
@@ -87,3 +87,19 @@ class Menu:
             "is_active": self.is_active,
             "children": [self.lock_button.serialize(), self.save_button.serialize(), self.load_button.serialize()]
         }
+
+    @staticmethod
+    def deserialize(data):
+        """
+        Create a Menu instance from serialized data.
+
+        Args:
+            data (dict): The serialized state of the menu.
+
+        Returns:
+            Menu: A new instance of Menu constructed from the serialized data.
+        """
+        menu = Menu(data["x"], data["y"])
+        menu.is_active = data.get("is_active", False)
+        # Might do children here
+        return menu
