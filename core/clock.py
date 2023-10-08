@@ -1,8 +1,8 @@
 import pygame
 from datetime import datetime
 from utils.pygame_helper_classes import Label
-
-class Clock:
+from utils.uiux import UIElement
+class Clock(UIElement):
     """
     A class for displaying a digital clock on a Pygame screen.
 
@@ -36,28 +36,18 @@ class Clock:
         "black": (0, 0, 0)
     }
 
-    def __init__(self, x=10, y=10, width=None, height=None, text_color="black", border_color="black", bg_color="darkGray"):
-        """
-        Initialize a Clock instance.
-
-        Args:
-            x (int, optional): The x-coordinate position of the clock. Default is 10.
-            y (int, optional): The y-coordinate position of the clock. Default is 10.
-            text_color (str, optional): The color of the clock's text. Default is "black".
-            border_color (str, optional): The color of the clock's border. Default is "black".
-            bg_color (str, optional): The background color of the clock. Default is "darkGray".
-        """
-        self.x_position = x
-        self.y_position = y
-
-        self.width = width
-        self.height = height
+    def __init__(self, x=10, y=10, width=None, height=None, text_color="black", border_color="black",
+                 bg_color="darkGray"):
+        super().__init__(x, y)
+        self.width = width if width else 150
+        self.height = height if height else 50
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
         # Set colors using the provided strings and the COLOR_MAP
         self.text_rgb = self.COLOR_MAP.get(text_color, self.COLOR_MAP["green"])
         self.border_rgb = self.COLOR_MAP.get(border_color, self.COLOR_MAP["darkGreen"])
         self.bg_rgb = self.COLOR_MAP.get(bg_color, self.COLOR_MAP["lightGray"])
-        self.rect = pygame.Rect(self.x_position, self.y_position, self.width, self.height)
+
 
     def display(self, screen):
         """
@@ -69,14 +59,14 @@ class Clock:
         current_time = datetime.now().strftime('%I:%M:%S %p')
         font = pygame.font.Font(None, 36)
 
-        start_x_position = self.x_position  # Save the starting position for later resetting
-        x_position = self.x_position
+        start_x_position = self.x  # Save the starting position for later resetting (CHANGED HERE)
+        x_position = self.x  # CHANGED HERE
 
         labels = []
 
         # First, calculate positions and dimensions without drawing
         for char in current_time:
-            label = Label(font, char, self.text_rgb, (x_position, self.y_position), anchor="topleft")
+            label = Label(font, char, self.text_rgb, (x_position, self.y), anchor="topleft")
             if char == '9':
                 label.rect.y -= 2
             x_position += label.rect.width
@@ -86,7 +76,7 @@ class Clock:
         max_height = max(label.rect.height for label in labels)
 
         # Draw background rectangle
-        pygame.draw.rect(screen, self.bg_rgb, (start_x_position - 5, self.y_position - 5, max_width + 10, max_height + 10))
+        pygame.draw.rect(screen, self.bg_rgb, (start_x_position - 5, self.y - 5, max_width + 10, max_height + 10))
 
         # Reset x_position for drawing the text
         x_position = start_x_position
@@ -96,27 +86,36 @@ class Clock:
             label.draw(screen)
 
         # Draw the border rectangle
-        pygame.draw.rect(screen, self.border_rgb, (start_x_position - 5, self.y_position - 5, max_width + 10, max_height + 10), 2)
+        pygame.draw.rect(screen, self.border_rgb, (start_x_position - 5, self.y - 5, max_width + 10, max_height + 10), 2)
 
     def update_position(self, dx, dy):
-        self.x_position += dx  # Corrected from self.x
-        self.y_position += dy  # Corrected from self.y
-        self.rect.topleft = (self.x_position, self.y_position)
+        super().update_position(dx, dy)  # Use the base class's update_position
 
     def resize(self, new_width, new_height):
-        self.width = new_width
-        self.height = new_height
-        self.rect.size = (self.width, self.height)
+        self.set_size(new_width, new_height)  # Use the base class's method
 
     def serialize(self):
-        return {
+        data = super().serialize()
+        data.update({
             'type': 'Clock',
-            'x': self.x_position,
-            'y': self.y_position,
-            'width': self.width,
-            'height': self.height,
-            # ...
-        }
+            'text_color': next(k for k, v in self.COLOR_MAP.items() if v == self.text_rgb),
+            'border_color': next(k for k, v in self.COLOR_MAP.items() if v == self.border_rgb),
+            'bg_color': next(k for k, v in self.COLOR_MAP.items() if v == self.bg_rgb)
+        })
+        return data
+
+    @staticmethod
+    def deserialize(data):
+        clock = Clock(
+            x=data["x"],
+            y=data["y"],
+            width=data["width"],
+            height=data["height"],
+            text_color=data["text_color"],
+            border_color=data["border_color"],
+            bg_color=data["bg_color"]
+        )
+        return clock
 
 
 if __name__ == "__main__":

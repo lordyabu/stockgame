@@ -49,6 +49,9 @@ def load_preset(filename='presets/preset.json', font=None):
             loaded_menu = Menu.deserialize(proj_data)
             projections.append(loaded_menu)
 
+        # elif proj_data['type'] == 'Clock':
+        #     projections.append(Clock.deserialize(proj_data))
+
     if font is None:
         font = pygame.font.SysFont(None, 24)  # Or any default you'd like
 
