@@ -1,6 +1,7 @@
 import pygame
 import pandas as pd
 from core.clock import Clock
+from utils.observer_pattern import Observer
 # Colors
 WHITE = (255, 255, 255)
 
@@ -8,7 +9,7 @@ WHITE = (255, 255, 255)
 WIDTH, HEIGHT = 800, 600
 
 
-class Graph:
+class Graph(Observer):
     """
     A class for plotting and displaying graphs on a Pygame screen.
 
@@ -76,13 +77,24 @@ class Graph:
 
         self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
 
-    def display(self, screen):
+
+
+        self.current_time_highlight = None  # New attribute to hold the current time from the slider.
+        self.point_radius = 5  # Size of the point to display on the graph for the current time.
+
+        self.highlight_index = None
+
+    def set_highlight_index(self, index):
         """
-        Display the graph on the Pygame screen.
+        Set the index to be highlighted.
 
         Args:
-            screen (pygame.Surface): The Pygame surface where the graph will be displayed.
+            index (int): The index to be highlighted.
         """
+        self.highlight_index = index
+
+    def display(self, screen):
+        # Draw the rectangle boundary of the graph
         pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, self.width, self.height), 2)
 
         # Plot data if df exists
@@ -105,6 +117,16 @@ class Graph:
                 prev_x_pos = x_pos
                 prev_y_pos = y_pos
 
+            # Add the code to display a point for the highlighted index
+            if self.highlight_index is not None and 0 <= self.highlight_index < len(self.df):
+                x_pos = self.x + (self.width / len(self.df) * self.highlight_index)
+                price = self.df['Price'].iloc[self.highlight_index]
+                price_normalized = (price - min_price) / (max_price - min_price)
+                y_pos = self.y + self.height - (self.height * price_normalized)
+
+                pygame.draw.circle(screen, (255, 0, 0), (int(x_pos), int(y_pos)),
+                                   self.point_radius)  # Drawing a red dot
+
         self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
 
     def update_position(self, dx, dy):
@@ -117,6 +139,14 @@ class Graph:
         """
         self.x += dx
         self.y += dy
+
+    def update(self, value):
+        """Called when the slider's value changes."""
+        # Update the highlight index based on the received value.
+        if self.df is not None:
+            self.highlight_index = int(value)
+            # Ensure the value is within the dataframe's bounds.
+            self.highlight_index = max(0, min(len(self.df) - 1, self.highlight_index))
 
     def serialize(self):
         """
@@ -136,22 +166,26 @@ class Graph:
         }
 
 
+# Colors
+WHITE = (255, 255, 255)
+
+# Screen dimensions
+WIDTH, HEIGHT = 800, 600
+
+# ... [Your Graph class goes here] ...
+
 if __name__ == "__main__":
     pygame.init()
 
-    # Initialize the Clock and Graph objects
-    clock_instance = Clock(10, 10, text_color="black", border_color="black", bg_color="darkGray")
-    main_graph = Graph(is_main=True, is_live=False, data_file='../data/PriceDay.csv', size_multiplier=1.5)
-
-    # Create side (auxiliary) graphs; this will adjust the global HEIGHT as necessary
-    side_graph1 = Graph(is_main=False, is_live=False, data_file='../data/PriceDay2.csv', size_multiplier=.9)
-    side_graph2 = Graph(is_main=False, is_live=False, data_file='../data/PriceDay3.csv', size_multiplier=.9)
-
-    # Now, initialize the Pygame screen with possibly adjusted WIDTH and HEIGHT
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption('StockGame with Graph')
+    pygame.display.set_caption('Graph Test')
 
-    # Main loop for rendering
+    # Try with an absolute path to the CSV if the relative path doesn't work.
+    test_graph = Graph(data_file='./data/PriceDay.csv')  # Replace with the correct path if needed
+
+    test_graph.set_highlight_index(2)
+
+
     running = True
     while running:
         for event in pygame.event.get():
@@ -159,11 +193,7 @@ if __name__ == "__main__":
                 running = False
 
         screen.fill(WHITE)
-        clock_instance.display(screen)
-        main_graph.display(screen)
-        side_graph1.display(screen)
-        side_graph2.display(screen)
-
+        test_graph.display(screen)
         pygame.display.flip()
 
     pygame.quit()

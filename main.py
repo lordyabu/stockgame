@@ -10,7 +10,7 @@ from core.presets import save_preset, load_preset
 pygame.init()
 GLOBAL_LOCK = False
 WHITE = (255, 255, 255)
-
+WIDTH, HEIGHT = 800, 600
 # Initial window dimensions
 screen = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
 pygame.display.set_caption("Resizable Window with Clock and Graphs")
@@ -91,10 +91,19 @@ while running:
             func = getattr(dragged_object, funcs.get(event.key, None), None)
             if func:
                 func()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_t:
+                main_graph.set_current_time('SomeTimeStampFromYourData')  # Replace 'SomeTimeStampFromYourData' with a valid timestamp from your data
+
 
     screen.fill(WHITE)
+    # Draw projections first
     for proj in projections:
-        proj.display(screen)
+        if not isinstance(proj, (Menu, MenuButton)):  # Not drawing Menu and MenuButton yet
+            proj.display(screen)
+    menu_button.display(screen)
+    menu.display(screen)
+
     pygame.display.flip()
 
 pygame.quit()
