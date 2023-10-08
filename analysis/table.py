@@ -1,7 +1,7 @@
 import pygame
 from utils.observer_pattern import Observable, Observer
-from core.graph import Graph
-from analysis.slider import Slider
+# from core.graph import Graph
+# from analysis.slider import Slider
 
 # Colors
 WHITE = (255, 255, 255)

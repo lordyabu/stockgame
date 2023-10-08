@@ -1,6 +1,6 @@
 import pygame
 from utils.observer_pattern import Observable
-from core.graph import Graph
+# from core.graph import Graph
 
 class Slider(Observable):
     def __init__(self, x, y, width, min_value, max_value):

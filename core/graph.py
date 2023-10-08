@@ -2,6 +2,9 @@ import pygame
 import pandas as pd
 from core.clock import Clock
 from utils.observer_pattern import Observer
+from utils.uiux import UIElement
+from analysis.slider import Slider
+from analysis.table import DataTable
 # Colors
 WHITE = (255, 255, 255)
 
@@ -9,7 +12,7 @@ WHITE = (255, 255, 255)
 WIDTH, HEIGHT = 800, 600
 
 
-class Graph(Observer):
+class Graph(UIElement, Observer):
     """
     A class for plotting and displaying graphs on a Pygame screen.
 
@@ -49,6 +52,7 @@ class Graph(Observer):
             width (int, optional): The width of the graph. Default is None.
             height (int, optional): The height of the graph. Default is None.
         """
+        super().__init__(x, y)
         self.is_live = is_live
         self.size_multiplier = size_multiplier
         try:
@@ -157,16 +161,36 @@ class Graph(Observer):
         Returns:
             dict: The dictionary representation of the graph.
         """
-        return {
-            'type': 'Graph',
-            'x': self.x,
-            'y': self.y,
-            'width': self.width,
-            'height': self.height,
+        data = super().serialize()
+        data.update({
             'data_file': self.df_path,
             'size_multiplier': self.size_multiplier,
-            'column': self.column
-        }
+            'column': self.column,
+            'width': self.width,
+            'height': self.height
+        })
+        return data
+
+    @staticmethod
+    def deserialize(data):
+        """
+        Create a Graph instance from serialized data.
+
+        Args:
+            data (dict): The dictionary representation of the graph.
+
+        Returns:
+            Graph: An instance of the Graph class.
+        """
+        return Graph(
+            x=data['x'],
+            y=data['y'],
+            width=data.get('width', None),
+            height=data.get('height', None),
+            data_file=data['data_file'],
+            column=data.get('column', 'Price'),
+            size_multiplier=data['size_multiplier']
+        )
 
 
 # Colors
