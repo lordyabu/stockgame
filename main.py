@@ -151,6 +151,7 @@ while running:
             if isinstance(proj, Slider):
                 proj.handle_events(event)
 
+        slider.handle_events(event)
     screen.fill(WHITE)
     for proj in projections:
         if not isinstance(proj, (Menu, MenuButton)):

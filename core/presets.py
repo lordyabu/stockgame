@@ -49,8 +49,8 @@ def load_preset(filename='presets/preset.json', font=None):
             loaded_menu = Menu.deserialize(proj_data)
             projections.append(loaded_menu)
 
-        # elif proj_data['type'] == 'Clock':
-        #     projections.append(Clock.deserialize(proj_data))
+        elif proj_data['type'] == 'Clock':
+            projections.append(Clock.deserialize(proj_data))
 
     if font is None:
         font = pygame.font.SysFont(None, 24)  # Or any default you'd like
@@ -73,5 +73,12 @@ def load_preset(filename='presets/preset.json', font=None):
 
         # Ensure that the slider's current_value is within its range
         loaded_slider.current_value = max(loaded_slider.min_value, min(loaded_slider.max_value, loaded_slider.current_value))
+
+    # Ensure menu position is based on the loaded MenuButton position
+    menu_button_proj = next((proj for proj in projections if isinstance(proj, MenuButton)), None)
+    loaded_menu = next((proj for proj in projections if isinstance(proj, Menu)), None)
+
+    if loaded_menu and menu_button_proj:
+        loaded_menu.update_position(menu_button_proj.rect.x, menu_button_proj.rect.y + menu_button_proj.rect.height)
 
     return projections

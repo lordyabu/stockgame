@@ -1,6 +1,6 @@
 import pygame
-
-class MenuButton:
+from utils.uiux import UIElement
+class MenuButton(UIElement):
     """
     A class representing a button with a label in a Pygame screen.
 
@@ -33,7 +33,8 @@ class MenuButton:
             height (int): The height of the button.
             text (str, optional): The label text for the button. Default is "Menu".
         """
-        self.x, self.y, self.width, self.height = x, y, width, height
+        super().__init__(x, y)
+        self.width, self.height = width, height
         self.text = text
         self.font = pygame.font.Font(None, 36)
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
@@ -67,23 +68,15 @@ class MenuButton:
         self.y += dy
         self.rect.topleft = (self.x, self.y)
 
-
-
     def serialize(self):
-        """
-        Serialize the state of the button into a dictionary.
-
-        Returns:
-            dict: A dictionary containing the serialized state of the button.
-        """
-        return {
+        data = super().serialize()  # Get base class serialization data
+        data.update({
             "type": "MenuButton",
-            "x": self.rect.x,
-            "y": self.rect.y,
             "width": self.rect.width,
             "height": self.rect.height,
             "text": self.text
-        }
+        })
+        return data
 
     @staticmethod
     def deserialize(data):

@@ -1,6 +1,6 @@
 import pygame
-
-class SwitchButton:
+from utils.uiux import UIElement
+class SwitchButton(UIElement):
     """
     A class representing a toggle (switch) button in a Pygame screen.
 
@@ -32,6 +32,7 @@ class SwitchButton:
             text_on (str, optional): The label text for the button when it's in the 'on' state. Default is "Locked".
             text_off (str, optional): The label text for the button when it's in the 'off' state. Default is "Unlocked".
         """
+        super().__init__(x, y)
         self.rect = pygame.Rect(x, y, width, height)
         self.is_on = False  # By default, it's off
         self.text_on = text_on
@@ -61,26 +62,17 @@ class SwitchButton:
         text_surface = font.render(text, True, (0, 0, 0))
         screen.blit(text_surface, (self.rect.x + 10, self.rect.y + 10))
 
-
     def serialize(self):
-        """
-        Serialize the state of the button into a dictionary.
-
-        Returns:
-            dict: A dictionary containing the serialized state of the button.
-        """
-        return {
+        data = super().serialize()  # Get base class serialization data
+        data.update({
             "type": "SwitchButton",
-            "x": self.rect.x,
-            "y": self.rect.y,
             "width": self.rect.width,
             "height": self.rect.height,
             "is_on": self.is_on,
             "text_on": self.text_on,
             "text_off": self.text_off
-
-    }
-
+        })
+        return data
 
     @staticmethod
     def deserialize(data):

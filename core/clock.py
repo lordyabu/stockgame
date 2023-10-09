@@ -109,8 +109,8 @@ class Clock(UIElement):
         clock = Clock(
             x=data["x"],
             y=data["y"],
-            width=data["width"],
-            height=data["height"],
+            width=data.get("width", 150),  # Providing default width
+            height=data.get("height", 50),  # Providing default height
             text_color=data["text_color"],
             border_color=data["border_color"],
             bg_color=data["bg_color"]

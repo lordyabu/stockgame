@@ -29,9 +29,14 @@ class Slider(UIElement, Observable):
         self.dragging = False
 
     def display(self, screen):
+        # Draw the background of the slider
         pygame.draw.rect(screen, self.track_color, self.rect)
+
+        # Calculate the handle position based on the current_value
         handle_x = self.x + (self.current_value - self.min_value) / (self.max_value - self.min_value) * (
-                    self.width - self.handle_width)
+                self.width - self.handle_width)
+
+        # Draw the handle
         pygame.draw.rect(screen, self.handle_color, (handle_x, self.y, self.handle_width, self.height))
 
     def handle_events(self, event):
@@ -40,26 +45,21 @@ class Slider(UIElement, Observable):
         handle_rect = pygame.Rect(handle_x, self.y, self.handle_width, self.height)
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1 and handle_rect.collidepoint(event.pos):  # Left click on handle
-                self.dragging = "HANDLE"
-            elif event.button == 3 and self.rect.collidepoint(event.pos):  # Right click on entire slider
-                self.dragging = "SLIDER"
+            if handle_rect.collidepoint(event.pos):  # Check if the slider's handle is clicked
+                self.dragging = True
 
         elif event.type == pygame.MOUSEBUTTONUP:
-            self.dragging = None
+            self.dragging = False
 
-        elif event.type == pygame.MOUSEMOTION:
-            if self.dragging == "HANDLE":  # If dragging handle with left-click
-                self.update_value_from_pos(event.pos[0])
-                self.notify_observers(self.current_value)
-            elif self.dragging == "SLIDER":  # If moving slider with right-click
-                self.update_position(event.rel[0], event.rel[1])
+        elif event.type == pygame.MOUSEMOTION and self.dragging:
+            self.update_value_from_pos(event.pos[0])
 
     def update_position(self, dx, dy):
-        """Override UIElement's method to also notify observers after position update."""
-        super().update_position(dx, dy)
+        """Update the position of the slider."""
+        self.x += dx
+        self.y += dy
+        self.rect.topleft = (self.x, self.y)
         self.notify_observers(self.current_value)
-
 
     def is_clicked(self, x, y):
         return self.rect.collidepoint(x, y)
