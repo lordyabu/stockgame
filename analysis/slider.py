@@ -1,6 +1,6 @@
 import pygame
 from utils.observer_pattern import Observable
-from core.graph import Graph
+# from core.graph import Graph
 from utils.uiux import UIElement
 
 class Slider(UIElement, Observable):

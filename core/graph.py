@@ -3,14 +3,18 @@ import pandas as pd
 from core.clock import Clock
 from utils.observer_pattern import Observer
 from utils.uiux import UIElement
-# from analysis.slider import Slider
-# from analysis.table import DataTable
+from analysis.slider import Slider
+from analysis.table import DataTable
 # Colors
 WHITE = (255, 255, 255)
 
 # Screen dimensions
 WIDTH, HEIGHT = 800, 600
 
+
+def darken_color(color, factor=0.7):
+    """Returns a darker shade of the provided color."""
+    return tuple([int(c * factor) for c in color])
 
 class Graph(UIElement, Observer):
     """
@@ -38,7 +42,7 @@ class Graph(UIElement, Observer):
 
     def __init__(self, is_live=False, data_file=None, column='Price',
                  size_multiplier=1.0, y_offset_percentage=0.6,
-                 x=None, y=None, width=None, height=None):
+                 x=None, y=None, width=None, height=None, color=(0, 0, 255), title=''):
         """
         Initialize a Graph instance.
 
@@ -91,6 +95,12 @@ class Graph(UIElement, Observer):
 
         self.highlight_index = None
 
+        self.color = color
+        self.title_color = darken_color(color)
+        self.title = [(title, self.title_color)]
+
+        self.original_title = title
+
     def set_highlight_index(self, index):
         """
         Set the index to be highlighted.
@@ -100,27 +110,34 @@ class Graph(UIElement, Observer):
         """
         self.highlight_index = index
 
-    def display(self, screen):
+    def overlapping_with(self, other_graphs):
+        """Determine if the graph is overlapping with any other graph."""
+        for graph in other_graphs:
+            if self.rect.colliderect(graph.rect):
+                return graph  # Return the overlapping graph
+        return None
+
+
+    def display(self, screen, other_graphs=[]):
         # Draw the rectangle boundary of the graph
         pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, self.width, self.height), 2)
+        font = pygame.font.SysFont(None, 24)
+        total_width = sum(font.size(t[0])[0] for t in self.title)
+        current_x = self.x + (self.width - total_width) // 2
 
         # Plot data if df exists
         if self.df is not None:
             max_val = self.df[self.column].max()
             min_val = self.df[self.column].min()
-
             values_normalized = [(value - min_val) / (max_val - min_val) for value in self.df[self.column]]
-
             prev_x_pos = None
             prev_y_pos = None
             for idx, value in enumerate(values_normalized):
                 x_pos = self.x + (self.width / len(self.df) * idx)
                 y_pos = self.y + self.height - (self.height * value)
-
                 if prev_x_pos is not None:
-                    pygame.draw.line(screen, (0, 0, 255), (int(prev_x_pos), int(prev_y_pos)), (int(x_pos), int(y_pos)),
+                    pygame.draw.line(screen, self.color, (int(prev_x_pos), int(prev_y_pos)), (int(x_pos), int(y_pos)),
                                      2)
-
                 prev_x_pos = x_pos
                 prev_y_pos = y_pos
 
@@ -130,13 +147,27 @@ class Graph(UIElement, Observer):
                 value = self.df[self.column].iloc[self.highlight_index]
                 value_normalized = (value - min_val) / (max_val - min_val)
                 y_pos = self.y + self.height - (self.height * value_normalized)
-
                 pygame.draw.circle(screen, (255, 0, 0), (int(x_pos), int(y_pos)),
                                    self.point_radius)  # Drawing a red dot
 
         self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
 
-    def update_position(self, dx, dy):
+        overlapping_graph = self.overlapping_with(other_graphs)
+        if overlapping_graph:
+            if self == overlapping_graph:
+                title_display = []  # Empty title for the second graph
+            else:
+                title_display = [(self.original_title, self.title_color)]
+        else:
+            title_display = [(self.original_title, self.title_color)]
+
+        current_x = self.x
+        for text, color in title_display:
+            text_surf = font.render(text, True, color)
+            screen.blit(text_surf, (current_x, self.y - 30))
+            current_x += font.size(text)[0] + 10  # Some spacing between titles
+
+    def update_position(self, dx, dy, other_graphs=[]):
         """
         Update the position of the graph.
 
@@ -146,6 +177,20 @@ class Graph(UIElement, Observer):
         """
         self.x += dx
         self.y += dy
+        self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
+
+        overlapping = False
+        for graph in other_graphs:
+            if self.rect.colliderect(graph.rect):
+                overlapping = True
+
+        # Reset titles if not overlapping with any graph
+        if not overlapping:
+            self.title = [(self.original_title, self.title_color)]
+            for graph in other_graphs:
+                graph.title = [(graph.original_title, graph.title_color)]
+
+        return overlapping
 
     def update(self, value):
         """Called when the slider's value changes."""
@@ -200,7 +245,6 @@ WHITE = (255, 255, 255)
 # Screen dimensions
 WIDTH, HEIGHT = 800, 600
 
-# ... [Your Graph class goes here] ...
 
 def main():
     pygame.init()
@@ -209,22 +253,25 @@ def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption('Interactive Data Visualization')
 
-    # Graph instances
-    test_graph1 = Graph(data_file='./data/PriceDay1.csv')
-    test_graph2 = Graph(data_file='./data/PriceDay2.csv')
+    # Graph instances with colors and titles
+    test_graph1 = Graph(data_file='./data/PriceDay1.csv', color=(255, 0, 0), title="Graph 1")
+    test_graph2 = Graph(data_file='./data/PriceDay2.csv', color=(0, 255, 0), title="Graph 2")
+
+    graphs = [test_graph1, test_graph2]
 
     # Slider instance
-    test_slider = Slider(x=50, y=500, width=700, min_value=0, max_value=max(len(test_graph1.df), len(test_graph2.df)) - 1)
+    test_slider = Slider(x=50, y=500, width=700, min_value=0,
+                         max_value=max(len(test_graph1.df), len(test_graph2.df)) - 1)
     test_slider.add_observer(test_graph1)
     test_slider.add_observer(test_graph2)
 
     # DataTable instance
     font = pygame.font.SysFont(None, 24)
-    graphs = [test_graph1, test_graph2]
     data_table = DataTable(x=650, y=50, graphs=graphs, font=font)
-
-    # Add the DataTable and Graph as observers of the slider
     test_slider.add_observer(data_table)
+
+    dragging = False
+    dragged_graph = None
 
     running = True
     while running:
@@ -233,14 +280,43 @@ def main():
                 running = False
             test_slider.handle_events(event)
 
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left mouse button
+                    for graph in graphs:
+                        if graph.rect.collidepoint(event.pos):
+                            dragging = True
+                            dragged_graph = graph
+                            break
+            elif event.type == pygame.MOUSEBUTTONUP:
+                dragging = False
+                if dragged_graph:
+                    is_overlapping = dragged_graph.update_position(0, 0, graphs)
+                    if is_overlapping:
+                        for graph in graphs:
+                            if graph != dragged_graph and dragged_graph.rect.colliderect(graph.rect):
+                                overlap_area = dragged_graph.rect.clip(graph.rect).width * dragged_graph.rect.clip(
+                                    graph.rect).height
+                                if overlap_area > 0.5 * (graph.rect.width * graph.rect.height):
+                                    # Adjust dragged_graph's position to perfectly overlap with the graph
+                                    dragged_graph.x = graph.x
+                                    dragged_graph.y = graph.y
+                                    dragged_graph.rect.topleft = (graph.x, graph.y)
+                dragged_graph = None  # Clear the dragged graph
+
+            elif event.type == pygame.MOUSEMOTION and dragging:
+                other_graphs = [graph for graph in graphs if graph != dragged_graph]
+                dragged_graph.update_position(event.rel[0], event.rel[1], other_graphs)
+
         screen.fill(WHITE)
-        test_graph1.display(screen)
-        test_graph2.display(screen)
+        for current_graph in graphs:
+            other_graphs = [graph for graph in graphs if graph != current_graph]
+            current_graph.display(screen, other_graphs)  # Modify the call to provide other_graphs
         test_slider.display(screen)
         data_table.display(screen)
         pygame.display.flip()
 
     pygame.quit()
+
 
 if __name__ == "__main__":
     main()
