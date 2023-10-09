@@ -110,15 +110,13 @@ class Graph(UIElement, Observer):
         """
         self.highlight_index = index
 
-    def overlapping_with(self, other_graphs):
-        """Determine if the graph is overlapping with any other graph."""
-        for graph in other_graphs:
-            if self.rect.colliderect(graph.rect):
-                return graph  # Return the overlapping graph
-        return None
+    def get_overlapping_graphs(self, other_graphs):
+        """Get the overlapping graphs."""
+        overlapping_graphs = [graph for graph in other_graphs if self.rect.colliderect(graph.rect)]
+        return overlapping_graphs
 
 
-    def display(self, screen, other_graphs=[]):
+    def display(self, screen, all_graphs=[]):
         # Draw the rectangle boundary of the graph
         pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, self.width, self.height), 2)
         font = pygame.font.SysFont(None, 24)
@@ -152,20 +150,28 @@ class Graph(UIElement, Observer):
 
         self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
 
-        overlapping_graph = self.overlapping_with(other_graphs)
-        if overlapping_graph:
-            if self == overlapping_graph:
-                title_display = []  # Empty title for the second graph
-            else:
-                title_display = [(self.original_title, self.title_color)]
-        else:
-            title_display = [(self.original_title, self.title_color)]
+        overlapping_graphs = self.get_overlapping_graphs(all_graphs)
+
+        # Check if the current graph is the last graph in the draw order among overlapping graphs.
+        topmost_graph = None
+        for graph in overlapping_graphs:
+            if not topmost_graph or all_graphs.index(graph) > all_graphs.index(topmost_graph):
+                topmost_graph = graph
+
+        title_display = []
+        if self == topmost_graph:
+            title_display.append((self.original_title, self.color))
+            for graph in overlapping_graphs:
+                if graph != self:
+                    title_display.append((graph.original_title, graph.color))
+        elif not overlapping_graphs:  # if there are no overlaps
+            title_display = [(self.original_title, self.color)]
 
         current_x = self.x
         for text, color in title_display:
             text_surf = font.render(text, True, color)
             screen.blit(text_surf, (current_x, self.y - 30))
-            current_x += font.size(text)[0] + 10  # Some spacing between titles
+            current_x += font.size(text)[0] + 10
 
     def update_position(self, dx, dy, other_graphs=[]):
         """
@@ -309,8 +315,7 @@ def main():
 
         screen.fill(WHITE)
         for current_graph in graphs:
-            other_graphs = [graph for graph in graphs if graph != current_graph]
-            current_graph.display(screen, other_graphs)  # Modify the call to provide other_graphs
+            current_graph.display(screen, graphs)
         test_slider.display(screen)
         data_table.display(screen)
         pygame.display.flip()
