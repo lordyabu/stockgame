@@ -22,14 +22,25 @@ def initialize_projections():
     object_configs = [
         {"class": Clock, "args": (10, 10, 100, 50), "kwargs": {"text_color": "black", "border_color": "black", "bg_color": "darkGray"}},
         {"class": Graph,
-         "kwargs": {"is_live": False, "data_file": './data/PriceDay1.csv', "column": 'Price', "size_multiplier": 1.5}},
+         "kwargs": {"is_live": False, "data_file": './data/PriceDay1.csv', "column": 'Price', "size_multiplier": 1.5, "color": (255, 0, 0), "title": "Graph 1", "original_title": "Graph 1"}},
         {"class": Graph,
-         "kwargs": {"is_live": False, "data_file": './data/PriceDay2.csv', "column": 'Price', "size_multiplier": .9}},
+         "kwargs": {"is_live": False, "data_file": './data/PriceDay2.csv', "column": 'Price', "size_multiplier": .9, "color": (0, 255, 0), "title": "Graph 2", "original_title": "Graph 2"}},
         {"class": Graph,
-         "kwargs": {"is_live": False, "data_file": './data/PriceDay3.csv', "column": 'Price', "size_multiplier": .9}}
+         "kwargs": {"is_live": False, "data_file": './data/PriceDay3.csv', "column": 'Price', "size_multiplier": .9, "color": (0, 0, 255), "title": "Graph 3", "original_title": "Graph 3"}}
     ]
 
     return [config["class"](*config.get("args", ()), **config["kwargs"]) for config in object_configs]
+
+
+def check_and_adjust_overlap(dragged_graph, other_graphs):
+    for graph in other_graphs:
+        if graph != dragged_graph and dragged_graph.rect.colliderect(graph.rect):
+            overlap_area = dragged_graph.rect.clip(graph.rect).width * dragged_graph.rect.clip(graph.rect).height
+            if overlap_area > 0.5 * (graph.rect.width * graph.rect.height):
+                # Adjust dragged_graph's position to perfectly overlap with the graph
+                dragged_graph.x = graph.x
+                dragged_graph.y = graph.y
+                dragged_graph.rect.topleft = (graph.x, graph.y)
 
 
 projections = initialize_projections()
@@ -41,6 +52,7 @@ projections.append(slider)  # Add slider to projections
 
 font = pygame.font.SysFont(None, 24)
 data_table = DataTable(650, 50, graphs, font)
+
 projections.append(data_table)  # Add data table to projections
 
 for graph in graphs:
@@ -132,12 +144,28 @@ while running:
 
         elif event.type == pygame.MOUSEBUTTONUP:
             dragging = False
+            if dragged_object and isinstance(dragged_object, Graph):
+                is_overlapping = dragged_object.update_position(0, 0, graphs)
+                if is_overlapping:
+                    for graph in graphs:
+                        if graph != dragged_object and dragged_object.rect.colliderect(graph.rect):
+                            overlap_area = dragged_object.rect.clip(graph.rect).width * dragged_object.rect.clip(
+                                graph.rect).height
+                            if overlap_area > 0.5 * (graph.rect.width * graph.rect.height):
+                                # Adjust dragged_graph's position to perfectly overlap with the graph
+                                dragged_object.x = graph.x
+                                dragged_object.y = graph.y
+                                dragged_object.rect.topleft = (graph.x, graph.y)
             dragged_object = None  # Clear the dragged object
+
 
         elif event.type == pygame.MOUSEMOTION and dragging:
             if isinstance(dragged_object, MenuButton):
                 dragged_object.update_position(*event.rel)
                 menu.update_position(dragged_object.x, dragged_object.y + dragged_object.height)
+            elif isinstance(dragged_object, Graph):
+                other_graphs = [graph for graph in graphs if graph != dragged_object]
+                dragged_object.update_position(event.rel[0], event.rel[1], other_graphs)
             else:
                 dragged_object.update_position(*event.rel)
 
@@ -152,9 +180,12 @@ while running:
                 proj.handle_events(event)
 
         slider.handle_events(event)
+
     screen.fill(WHITE)
     for proj in projections:
-        if not isinstance(proj, (Menu, MenuButton)):
+        if isinstance(proj, Graph):
+            proj.display(screen, graphs)
+        elif not isinstance(proj, (Menu, MenuButton)):
             proj.display(screen)
     menu_button.display(screen)
     menu.display(screen)

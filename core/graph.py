@@ -3,8 +3,8 @@ import pandas as pd
 from core.clock import Clock
 from utils.observer_pattern import Observer
 from utils.uiux import UIElement
-from analysis.slider import Slider
-from analysis.table import DataTable
+# from analysis.slider import Slider
+# from analysis.table import DataTable
 # Colors
 WHITE = (255, 255, 255)
 
@@ -42,7 +42,7 @@ class Graph(UIElement, Observer):
 
     def __init__(self, is_live=False, data_file=None, column='Price',
                  size_multiplier=1.0, y_offset_percentage=0.6,
-                 x=None, y=None, width=None, height=None, color=(0, 0, 255), title=''):
+                 x=None, y=None, width=None, height=None, color=(0, 0, 255), title='', original_title=''):
         """
         Initialize a Graph instance.
 
@@ -97,9 +97,9 @@ class Graph(UIElement, Observer):
 
         self.color = color
         self.title_color = darken_color(color)
-        self.title = [(title, self.title_color)]
+        self.title = [title, self.title_color]
 
-        self.original_title = title
+        self.original_title = original_title
 
     def set_highlight_index(self, index):
         """
@@ -115,13 +115,10 @@ class Graph(UIElement, Observer):
         overlapping_graphs = [graph for graph in other_graphs if self.rect.colliderect(graph.rect)]
         return overlapping_graphs
 
-
     def display(self, screen, all_graphs=[]):
         # Draw the rectangle boundary of the graph
         pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, self.width, self.height), 2)
         font = pygame.font.SysFont(None, 24)
-        total_width = sum(font.size(t[0])[0] for t in self.title)
-        current_x = self.x + (self.width - total_width) // 2
 
         # Plot data if df exists
         if self.df is not None:
@@ -139,7 +136,7 @@ class Graph(UIElement, Observer):
                 prev_x_pos = x_pos
                 prev_y_pos = y_pos
 
-            # Add the code to display a point for the highlighted index
+            # Display a point for the highlighted index
             if self.highlight_index is not None and 0 <= self.highlight_index < len(self.df):
                 x_pos = self.x + (self.width / len(self.df) * self.highlight_index)
                 value = self.df[self.column].iloc[self.highlight_index]
@@ -150,28 +147,9 @@ class Graph(UIElement, Observer):
 
         self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
 
-        overlapping_graphs = self.get_overlapping_graphs(all_graphs)
-
-        # Check if the current graph is the last graph in the draw order among overlapping graphs.
-        topmost_graph = None
-        for graph in overlapping_graphs:
-            if not topmost_graph or all_graphs.index(graph) > all_graphs.index(topmost_graph):
-                topmost_graph = graph
-
-        title_display = []
-        if self == topmost_graph:
-            title_display.append((self.original_title, self.color))
-            for graph in overlapping_graphs:
-                if graph != self:
-                    title_display.append((graph.original_title, graph.color))
-        elif not overlapping_graphs:  # if there are no overlaps
-            title_display = [(self.original_title, self.color)]
-
-        current_x = self.x
-        for text, color in title_display:
-            text_surf = font.render(text, True, color)
-            screen.blit(text_surf, (current_x, self.y - 30))
-            current_x += font.size(text)[0] + 10
+        # Display the original title for the graph
+        title_surf = font.render(self.original_title, True, self.color)
+        screen.blit(title_surf, (self.x, self.y - 30))
 
     def update_position(self, dx, dy, other_graphs=[]):
         """
@@ -185,19 +163,6 @@ class Graph(UIElement, Observer):
         self.y += dy
         self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
 
-        overlapping = False
-        for graph in other_graphs:
-            if self.rect.colliderect(graph.rect):
-                overlapping = True
-
-        # Reset titles if not overlapping with any graph
-        if not overlapping:
-            self.title = [(self.original_title, self.title_color)]
-            for graph in other_graphs:
-                graph.title = [(graph.original_title, graph.title_color)]
-
-        return overlapping
-
     def update(self, value):
         """Called when the slider's value changes."""
         # Update the highlight index based on the received value.
@@ -209,17 +174,19 @@ class Graph(UIElement, Observer):
     def serialize(self):
         """
         Convert the graph object into a serializable dictionary.
-
         Returns:
             dict: The dictionary representation of the graph.
         """
         data = super().serialize()
+
         data.update({
             'data_file': self.df_path,
             'size_multiplier': self.size_multiplier,
             'column': self.column,
             'width': self.width,
-            'height': self.height
+            'height': self.height,
+            'color': self.color,
+            'original_title': self.original_title
         })
         return data
 
@@ -227,13 +194,12 @@ class Graph(UIElement, Observer):
     def deserialize(data):
         """
         Create a Graph instance from serialized data.
-
         Args:
             data (dict): The dictionary representation of the graph.
-
         Returns:
             Graph: An instance of the Graph class.
         """
+
         return Graph(
             x=data['x'],
             y=data['y'],
@@ -241,8 +207,11 @@ class Graph(UIElement, Observer):
             height=data.get('height', None),
             data_file=data['data_file'],
             column=data.get('column', 'Price'),
-            size_multiplier=data['size_multiplier']
+            size_multiplier=data['size_multiplier'],
+            color=data['color'],
+            original_title=data['original_title']
         )
+
 
 
 # Colors

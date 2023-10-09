@@ -2,14 +2,14 @@ import pygame
 from utils.observer_pattern import Observable, Observer
 # from core.graph import Graph
 # from analysis.slider import Slider
-
+from utils.uiux import UIElement
 # Colors
 WHITE = (255, 255, 255)
 
 # Screen dimensions
 WIDTH, HEIGHT = 800, 600
 
-class DataTable(Observer):
+class DataTable(UIElement, Observer):
     def __init__(self, x, y, graphs, font, initial_index=0):
         self.x = x
         self.y = y
@@ -29,13 +29,15 @@ class DataTable(Observer):
         for graph in self.graphs:
             if graph.df is not None and 0 <= index < len(graph.df):
                 unique_key = f"{graph.df_path}_{graph.column}"  # Create a unique key combining both file name and column name
-                self.current_values[unique_key] = graph.df[graph.column].iloc[index]
+                value = graph.df[graph.column].iloc[index]
+                # Also store the graph's color with the value
+                self.current_values[unique_key] = (value, graph.color)
 
     def display(self, screen):
         if self.current_values:
-            for i, (key, value) in enumerate(self.current_values.items()):
+            for i, (key, (value, color)) in enumerate(self.current_values.items()):
                 column_name = key.split('_')[-1]  # Extract the column name from the unique key
-                text = self.font.render(f"{column_name}: {value}", True, (0, 0, 0))
+                text = self.font.render(f"{column_name}: {value}", True, color)
                 screen.blit(text, (self.x, self.y + i * 20))
 
     def handle_events(self, event):
@@ -72,8 +74,8 @@ if __name__ == "__main__":
     pygame.display.set_caption('Interactive Data Visualization')
 
     # Graph instances
-    test_graph1 = Graph(data_file='./data/PriceDay1.csv')
-    test_graph2 = Graph(data_file='./data/PriceDay2.csv')
+    test_graph1 = Graph(data_file='./data/PriceDay1.csv', color=(255, 0, 0), title="Graph 1")
+    test_graph2 = Graph(data_file='./data/PriceDay2.csv', color=(0, 255, 0), title="Graph 2")
 
     # Slider instance
     test_slider = Slider(x=50, y=500, width=700, min_value=0, max_value=max(len(test_graph1.df), len(test_graph2.df)) - 1)

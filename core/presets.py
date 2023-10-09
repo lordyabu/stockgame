@@ -7,6 +7,7 @@ from menu.main_menu import Menu
 from menu.menu_button import MenuButton
 from analysis.slider import Slider
 from analysis.table import DataTable
+import os
 def save_preset(projections, filename='presets/preset.json'):
     with open(filename, 'w') as f:
         json.dump([proj.serialize() for proj in projections], f)
@@ -23,15 +24,11 @@ def load_preset(filename='presets/preset.json', font=None):
 
     for proj_data in data:
         if proj_data['type'] == 'Graph':
-            graph = Graph(
-                x=proj_data['x'],
-                y=proj_data['y'],
-                width=proj_data['width'],
-                height=proj_data['height'],
-                data_file=proj_data['data_file'],
-                size_multiplier=proj_data.get('size_multiplier', 1.0),
-                column=proj_data['column']
-            )
+            if not os.path.exists(proj_data['data_file']):
+                print(f"Error: Data file {proj_data['data_file']} not found. Skipping this graph.")
+                continue
+
+            graph = Graph.deserialize(proj_data)
             projections.append(graph)
             loaded_graphs.append(graph)
 
