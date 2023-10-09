@@ -103,7 +103,7 @@ if __name__ == "__main__":
     pygame.display.set_caption('Graph Test with Slider')
 
     # Instantiate graph and make it observe the slider
-    test_graph = Graph(data_file='./data/PriceDay1.csv')  # Replace with the correct path if needed
+    test_graph = Graph(data_file='./data/PriceDay3.csv')  # Replace with the correct path if needed
 
     if test_graph.df is not None and test_graph.column in test_graph.df.columns:
         slider_max_value = len(test_graph.df[test_graph.column]) - 1

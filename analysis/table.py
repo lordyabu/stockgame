@@ -74,8 +74,8 @@ if __name__ == "__main__":
     pygame.display.set_caption('Interactive Data Visualization')
 
     # Graph instances
-    test_graph1 = Graph(data_file='./data/PriceDay1.csv', color=(255, 0, 0), title="Graph 1")
-    test_graph2 = Graph(data_file='./data/PriceDay2.csv', color=(0, 255, 0), title="Graph 2")
+    test_graph1 = Graph(data_file='./data/PriceDay3.csv', color=(255, 0, 0), title="Graph 1")
+    test_graph2 = Graph(data_file='./data/PriceDay3.csv', color=(0, 255, 0), title="Graph 2")
 
     # Slider instance
     test_slider = Slider(x=50, y=500, width=700, min_value=0, max_value=max(len(test_graph1.df), len(test_graph2.df)) - 1)

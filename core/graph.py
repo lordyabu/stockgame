@@ -5,6 +5,7 @@ from utils.observer_pattern import Observer
 from utils.uiux import UIElement
 # from analysis.slider import Slider
 # from analysis.table import DataTable
+import os
 # Colors
 WHITE = (255, 255, 255)
 
@@ -101,6 +102,9 @@ class Graph(UIElement, Observer):
 
         self.original_title = original_title
 
+        # Extract the filename from the data_file path
+        self.data_filename = os.path.basename(data_file) if data_file else None
+
     def set_highlight_index(self, index):
         """
         Set the index to be highlighted.
@@ -151,6 +155,19 @@ class Graph(UIElement, Observer):
         title_surf = font.render(self.original_title, True, self.color)
         screen.blit(title_surf, (self.x, self.y - 30))
 
+    def set_data_file(self, day):
+        if not self.data_filename:  # If filename not set, don't continue
+            return
+
+        try:
+            self.df_path = f"./data/Day{day}/{self.data_filename}"
+            self.df = pd.read_csv(self.df_path)
+            print(f"Loaded data for Day{day}. First few rows:")
+            print(self.df.head())  # Printing the first few rows of the new data
+        except FileNotFoundError:
+            print(f"Error: Data file {self.df_path} not found.")
+            self.df = None
+
     def update_position(self, dx, dy, other_graphs=[]):
         """
         Update the position of the graph.
@@ -186,7 +203,8 @@ class Graph(UIElement, Observer):
             'width': self.width,
             'height': self.height,
             'color': self.color,
-            'original_title': self.original_title
+            'original_title': self.original_title,
+            'data_filename': self.data_filename
         })
         return data
 
@@ -200,18 +218,22 @@ class Graph(UIElement, Observer):
             Graph: An instance of the Graph class.
         """
 
+        # Construct the default data_file path with 'Day1' and the data_filename.
+        default_day = "Day1"
+        data_filename = data.get('data_filename', '')
+        constructed_data_file = os.path.join(f"./data/{default_day}", data_filename)
+
         return Graph(
             x=data['x'],
             y=data['y'],
             width=data.get('width', None),
             height=data.get('height', None),
-            data_file=data['data_file'],
+            data_file=constructed_data_file,
             column=data.get('column', 'Price'),
             size_multiplier=data['size_multiplier'],
             color=data['color'],
             original_title=data['original_title']
         )
-
 
 
 # Colors
@@ -229,8 +251,8 @@ def main():
     pygame.display.set_caption('Interactive Data Visualization')
 
     # Graph instances with colors and titles
-    test_graph1 = Graph(data_file='./data/PriceDay1.csv', color=(255, 0, 0), title="Graph 1")
-    test_graph2 = Graph(data_file='./data/PriceDay2.csv', color=(0, 255, 0), title="Graph 2")
+    test_graph1 = Graph(data_file='./data/PriceDay3.csv', color=(255, 0, 0), title="Graph 1")
+    test_graph2 = Graph(data_file='./data/PriceDay3.csv', color=(0, 255, 0), title="Graph 2")
 
     graphs = [test_graph1, test_graph2]
 

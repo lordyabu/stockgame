@@ -7,6 +7,7 @@ from menu.main_menu import Menu
 from menu.menu_button import MenuButton
 from analysis.slider import Slider
 from analysis.table import DataTable
+from core.dayswitch import DaySwitch
 import os
 def save_preset(projections, filename='presets/preset.json'):
     with open(filename, 'w') as f:
@@ -48,6 +49,9 @@ def load_preset(filename='presets/preset.json', font=None):
 
         elif proj_data['type'] == 'Clock':
             projections.append(Clock.deserialize(proj_data))
+
+        elif proj_data['type'] == 'DaySwitch':
+            projections.append(DaySwitch.deserialize(proj_data))
 
     if font is None:
         font = pygame.font.SysFont(None, 24)  # Or any default you'd like

@@ -22,25 +22,16 @@ def initialize_projections():
     object_configs = [
         {"class": Clock, "args": (10, 10, 100, 50), "kwargs": {"text_color": "black", "border_color": "black", "bg_color": "darkGray"}},
         {"class": Graph,
-         "kwargs": {"is_live": False, "data_file": './data/PriceDay1.csv', "column": 'Price', "size_multiplier": 1.5, "color": (255, 0, 0), "title": "Graph 1", "original_title": "Graph 1"}},
+         "kwargs": {"is_live": False, "data_file": './data/Day1/PriceDay2.csv', "column": 'Price', "size_multiplier": 1.5, "color": (255, 0, 0), "title": "Graph 1", "original_title": "Graph 1"}},
         {"class": Graph,
-         "kwargs": {"is_live": False, "data_file": './data/PriceDay2.csv', "column": 'Price', "size_multiplier": .9, "color": (0, 255, 0), "title": "Graph 2", "original_title": "Graph 2"}},
+         "kwargs": {"is_live": False, "data_file": './data/Day1/PriceDay3.csv', "column": 'Price', "size_multiplier": .9, "color": (0, 255, 0), "title": "Graph 2", "original_title": "Graph 2"}},
         {"class": Graph,
-         "kwargs": {"is_live": False, "data_file": './data/PriceDay3.csv', "column": 'Price', "size_multiplier": .9, "color": (0, 0, 255), "title": "Graph 3", "original_title": "Graph 3"}}
+         "kwargs": {"is_live": False, "data_file": './data/Day1/PriceDay1.csv', "column": 'Price', "size_multiplier": .9, "color": (0, 0, 255), "title": "Graph 3", "original_title": "Graph 3"}}
     ]
 
     return [config["class"](*config.get("args", ()), **config["kwargs"]) for config in object_configs]
 
 
-def check_and_adjust_overlap(dragged_graph, other_graphs):
-    for graph in other_graphs:
-        if graph != dragged_graph and dragged_graph.rect.colliderect(graph.rect):
-            overlap_area = dragged_graph.rect.clip(graph.rect).width * dragged_graph.rect.clip(graph.rect).height
-            if overlap_area > 0.5 * (graph.rect.width * graph.rect.height):
-                # Adjust dragged_graph's position to perfectly overlap with the graph
-                dragged_graph.x = graph.x
-                dragged_graph.y = graph.y
-                dragged_graph.rect.topleft = (graph.x, graph.y)
 
 
 projections = initialize_projections()
