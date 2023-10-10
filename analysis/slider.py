@@ -1,8 +1,6 @@
 import pygame
 from utils.observer_pattern import Observable
-# from core.graph import Graph
 from utils.uiux import UIElement
-
 class Slider(UIElement, Observable):
 
     def __init__(self, x, y, width, min_value, max_value):
@@ -27,6 +25,7 @@ class Slider(UIElement, Observable):
 
         # Additional attribute to check if the handle is being dragged
         self.dragging = False
+        self.dragging_position = False
 
     def display(self, screen):
         # Draw the background of the slider
@@ -39,20 +38,28 @@ class Slider(UIElement, Observable):
         # Draw the handle
         pygame.draw.rect(screen, self.handle_color, (handle_x, self.y, self.handle_width, self.height))
 
-    def handle_events(self, event):
+    def handle_events(self, event, is_locked=False):
+        if is_locked:  # Assumes you make GLOBAL_LOCK a class variable of Application
+            return
         handle_x = self.x + (self.current_value - self.min_value) / (self.max_value - self.min_value) * (
                 self.width - self.handle_width)
         handle_rect = pygame.Rect(handle_x, self.y, self.handle_width, self.height)
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if handle_rect.collidepoint(event.pos):  # Check if the slider's handle is clicked
+            if event.button == 1 and handle_rect.collidepoint(event.pos):  # Left click on handle
                 self.dragging = True
+            elif event.button == 3 and self.rect.collidepoint(event.pos):  # Right click on slider
+                self.dragging_position = True
 
         elif event.type == pygame.MOUSEBUTTONUP:
             self.dragging = False
+            self.dragging_position = False
 
-        elif event.type == pygame.MOUSEMOTION and self.dragging:
-            self.update_value_from_pos(event.pos[0])
+        elif event.type == pygame.MOUSEMOTION:
+            if self.dragging:  # If dragging the handle
+                self.update_value_from_pos(event.pos[0])
+            elif self.dragging_position:  # If dragging the entire slider's position
+                self.update_position(*event.rel)
 
     def update_position(self, dx, dy):
         """Update the position of the slider."""

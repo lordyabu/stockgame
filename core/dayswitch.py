@@ -48,16 +48,16 @@ class DaySwitch(UIElement, Observable):
 
 
     def check_click(self, pos):
-        print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACV')
+        # print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACV')
         if self.left_arrow_rect.collidepoint(pos):
             self._move_day(-1)
         elif self.right_arrow_rect.collidepoint(pos):
             self._move_day(1)
         else:
-            print("HUS")
+            pass
 
     def _move_day(self, direction):
-        print("MOVING")
+        #  print("MOVING")
         self.current_day += direction
         if self.current_day > self.max_days:
             self.current_day = 1
@@ -73,7 +73,7 @@ class DaySwitch(UIElement, Observable):
                 self.current_day = self.max_days
 
         for graph in self.graphs:
-            print("SETTING DAY", self.current_day)
+            # print("SETTING DAY", self.current_day)
             graph.set_data_file(self.current_day)
 
     def serialize(self):

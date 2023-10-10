@@ -76,3 +76,33 @@ def load_preset(filename='presets/preset.json', font=None):
         loaded_menu.update_position(menu_button_proj.rect.x, menu_button_proj.rect.y + menu_button_proj.rect.height)
 
     return projections
+
+
+def load_project_state(projections):
+    # Load the saved state
+    loaded_projections = load_preset()
+
+    # Clear the current projections and add loaded ones
+    projections.clear()
+    projections.extend(loaded_projections)
+
+    # Extracting and updating the necessary components
+    slider = next((proj for proj in projections if isinstance(proj, Slider)), None)
+    menu_button = next((proj for proj in projections if isinstance(proj, MenuButton)), None)
+    menu = next((proj for proj in projections if isinstance(proj, Menu)), None)
+    data_table = next((proj for proj in projections if isinstance(proj, DataTable)), None)
+    day_switch = next((proj for proj in projections if isinstance(proj, DaySwitch)), None)
+    graphs = [proj for proj in projections if isinstance(proj, Graph)]
+
+    # Reconnecting the observers
+    if slider and data_table:
+        slider.add_observer(data_table)
+    if slider and graphs:
+        for graph in graphs:
+            slider.add_observer(graph)
+
+    # Reconnect the DaySwitch object to the loaded graphs
+    if day_switch and graphs:
+        day_switch.graphs = graphs
+
+    return slider, menu_button, menu, data_table, day_switch, graphs

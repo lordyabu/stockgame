@@ -106,6 +106,7 @@ class Graph(UIElement, Observer):
 
         # Extract the filename from the data_file path
         self.data_filename = os.path.basename(data_file) if data_file else None
+        print(f"Graph {self.title} positioned at ({self.x}, {self.y})")
 
     def set_highlight_index(self, index):
         """
@@ -122,7 +123,7 @@ class Graph(UIElement, Observer):
         return overlapping_graphs
 
     def display(self, screen, all_graphs=[]):
-        print(id(self), 'DISPLAYING')
+        # print(id(self), 'DISPLAYING')
         # Draw the rectangle boundary of the graph
         pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, self.width, self.height), 2)
         font = pygame.font.SysFont(None, 24)
@@ -159,22 +160,22 @@ class Graph(UIElement, Observer):
         screen.blit(title_surf, (self.x, self.y - 30))
 
     def set_data_file(self, day):
-        print("SSSSSS")
-        print(id(self), 'SETTING')
+        # print("SSSSSS")
+        # print(id(self), 'SETTING')
         if not self.data_filename:  # If filename not set, don't continue
-            print("CASFCSACASCASFGVGSAGASGSAGASG")
+            # print("CASFCSACASCASFGVGSAGASGSAGASG")
             return
 
         try:
             new_path = f"./data/Day{day}/{self.data_filename}"
-            print(new_path)
+            # print(new_path)
             new_df = pd.read_csv(new_path)
             self.df_path = new_path
             if not new_df.empty:
                 self.df_path = new_path
                 self.df = new_df
-                print(f"Loaded data for Day{day}. First few rows:")
-                print(self.df.head())  # Printing the first few rows of the new data
+                # print(f"Loaded data for Day{day}. First few rows:")
+                # print(self.df.head())  # Printing the first few rows of the new data
             else:
                 print(f"Warning: Data file {new_path} is empty.")
         except FileNotFoundError:
