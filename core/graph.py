@@ -1,3 +1,5 @@
+import time
+
 import pygame
 import pandas as pd
 from core.clock import Clock
@@ -120,6 +122,7 @@ class Graph(UIElement, Observer):
         return overlapping_graphs
 
     def display(self, screen, all_graphs=[]):
+        print(id(self), 'DISPLAYING')
         # Draw the rectangle boundary of the graph
         pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, self.width, self.height), 2)
         font = pygame.font.SysFont(None, 24)
@@ -156,17 +159,26 @@ class Graph(UIElement, Observer):
         screen.blit(title_surf, (self.x, self.y - 30))
 
     def set_data_file(self, day):
+        print("SSSSSS")
+        print(id(self), 'SETTING')
         if not self.data_filename:  # If filename not set, don't continue
+            print("CASFCSACASCASFGVGSAGASGSAGASG")
             return
 
         try:
-            self.df_path = f"./data/Day{day}/{self.data_filename}"
-            self.df = pd.read_csv(self.df_path)
-            print(f"Loaded data for Day{day}. First few rows:")
-            print(self.df.head())  # Printing the first few rows of the new data
+            new_path = f"./data/Day{day}/{self.data_filename}"
+            print(new_path)
+            new_df = pd.read_csv(new_path)
+            self.df_path = new_path
+            if not new_df.empty:
+                self.df_path = new_path
+                self.df = new_df
+                print(f"Loaded data for Day{day}. First few rows:")
+                print(self.df.head())  # Printing the first few rows of the new data
+            else:
+                print(f"Warning: Data file {new_path} is empty.")
         except FileNotFoundError:
-            print(f"Error: Data file {self.df_path} not found.")
-            self.df = None
+            print(f"Error: Data file {new_path} not found.")
 
     def update_position(self, dx, dy, other_graphs=[]):
         """
@@ -187,6 +199,10 @@ class Graph(UIElement, Observer):
             self.highlight_index = int(value)
             # Ensure the value is within the dataframe's bounds.
             self.highlight_index = max(0, min(len(self.df) - 1, self.highlight_index))
+
+    def update_day(self, day_value):
+        # Handle the change in day and update the graph's data accordingly.
+        self.set_data_file(day_value)
 
     def serialize(self):
         """

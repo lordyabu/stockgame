@@ -1,10 +1,11 @@
 from utils.uiux import UIElement
+from utils.observer_pattern import Observable
 import pygame
 import os
 from core.graph import Graph
 
 
-class DaySwitch(UIElement):
+class DaySwitch(UIElement, Observable):
     def __init__(self, x, y, graphs=[], max_days=99):
         super().__init__(x, y)
         self.max_days = max_days
@@ -20,6 +21,10 @@ class DaySwitch(UIElement):
         self.left_arrow_rect = pygame.Rect(x, y, self.arrow_size, self.arrow_size)
         self.right_arrow_rect = pygame.Rect(x + 2 * self.padding + self.arrow_size, y, self.arrow_size, self.arrow_size)
 
+        # Define bounding rect for the entire DaySwitch
+        total_width = self.arrow_size + 2 * self.padding + self.arrow_size + self.font.size(f"Day {self.max_days}")[0]
+        self.rect = pygame.Rect(self.x, self.y, total_width, self.arrow_size)
+
     def display(self, screen):
         pygame.draw.polygon(screen, (0, 0, 0), [(self.left_arrow_rect.x + self.arrow_size, self.left_arrow_rect.y),
                                                 (self.left_arrow_rect.x, self.left_arrow_rect.centery),
@@ -34,19 +39,25 @@ class DaySwitch(UIElement):
         day_text = self.font.render(f"Day{self.current_day}", True, (0, 0, 0))
         screen.blit(day_text, (self.x + self.padding + self.arrow_size, self.y))
 
-    def _move_day(self, direction):
-        ...
-        # Notify all graph objects to change their data file
-        for graph in self.graphs:
-            graph.set_data_file(self.current_day)
+
+    def clear_graphs(self):
+        self.graphs = []
+
+    def add_graphs(self, graphs):
+        self.graphs.extend(graphs)
+
 
     def check_click(self, pos):
+        print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACV')
         if self.left_arrow_rect.collidepoint(pos):
             self._move_day(-1)
         elif self.right_arrow_rect.collidepoint(pos):
             self._move_day(1)
+        else:
+            print("HUS")
 
     def _move_day(self, direction):
+        print("MOVING")
         self.current_day += direction
         if self.current_day > self.max_days:
             self.current_day = 1
@@ -62,12 +73,13 @@ class DaySwitch(UIElement):
                 self.current_day = self.max_days
 
         for graph in self.graphs:
+            print("SETTING DAY", self.current_day)
             graph.set_data_file(self.current_day)
 
     def serialize(self):
         """Serialize the DaySwitch instance into a dictionary."""
         data = {
-            'type': "Dayswitch",
+            'type': "DaySwitch",
             'x': self.x,
             'y': self.y,
             'current_day': self.current_day,
@@ -83,10 +95,27 @@ class DaySwitch(UIElement):
         current_day = data.get('current_day', 1)
         max_days = data.get('max_days', 99)
 
-        # Restore the DaySwitch instance with the saved day and position.
         day_switch = DaySwitch(x, y, graphs=graphs, max_days=max_days)
         day_switch.current_day = current_day
+
+        # Ensure that the clickable regions are updated based on the loaded position:
+        day_switch.left_arrow_rect = pygame.Rect(x, y, day_switch.arrow_size, day_switch.arrow_size)
+        day_switch.right_arrow_rect = pygame.Rect(x + 2 * day_switch.padding + day_switch.arrow_size, y,
+                                                  day_switch.arrow_size, day_switch.arrow_size)
+
         return day_switch
+
+    def update_position(self, dx, dy):
+        """Update the position of the DaySwitch and its sub-elements."""
+        self.x += dx
+        self.y += dy
+
+        self.rect.move_ip(dx, dy)
+        self.left_arrow_rect.move_ip(dx, dy)
+        self.right_arrow_rect.move_ip(dx, dy)
+
+    def resize(self, new_width, new_height):
+        pass  # Implement if needed
 
 
 # Colors

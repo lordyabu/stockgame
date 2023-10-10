@@ -7,7 +7,7 @@ from menu.menu_button import MenuButton
 from core.presets import save_preset, load_preset
 from analysis.slider import Slider
 from analysis.table import DataTable
-
+from core.dayswitch import DaySwitch
 
 # Pygame Initialization
 pygame.init()
@@ -46,13 +46,20 @@ data_table = DataTable(650, 50, graphs, font)
 
 projections.append(data_table)  # Add data table to projections
 
-for graph in graphs:
-    slider.add_observer(graph)
 slider.add_observer(data_table)
 
 menu_button = MenuButton(700, 10, 80, 40, "Menu")
 menu = Menu(700, 60)
 projections.extend([menu_button, menu])
+
+# Initialize the DaySwitch component
+day_switch = DaySwitch(650, 10, graphs=graphs)  # Place it near the MenuButton for visual consistency
+projections.append(day_switch)  # Add day_switch to projections for rendering and event handling
+
+for graph in graphs:
+    slider.add_observer(graph)
+
+
 
 dragging = False
 dragged_object = None
@@ -66,6 +73,9 @@ while running:
         elif event.type == pygame.VIDEORESIZE:
             screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
         elif event.type == pygame.MOUSEBUTTONDOWN:
+            if day_switch.rect.collidepoint(event.pos):
+                dragged_object = day_switch
+                dragging = True
             if event.button == 3 and menu_button.rect.collidepoint(event.pos) and not GLOBAL_LOCK:
                 dragged_object = menu_button
                 dragging = True
@@ -79,6 +89,13 @@ while running:
                 dragged_object = next((proj for proj in projections if
                                        proj.rect.collidepoint(event.pos) and hasattr(proj, 'update_position')), None)
                 dragging = dragged_object is not None
+            # Handling DaySwitch events
+            day_switch.check_click(event.pos)
+
+            if event.button == 1 and day_switch.rect.collidepoint(event.pos):
+                dragged_object = day_switch
+                dragging = True
+
             if menu.save_button.rect.collidepoint(event.pos):
                 save_preset(projections)
             elif menu.load_button.rect.collidepoint(event.pos):
@@ -88,33 +105,10 @@ while running:
                 # Clear the current projections
                 projections.clear()
 
-                menu_button_proj = next((proj for proj in loaded_projections if isinstance(proj, MenuButton)), None)
-                if menu_button_proj:
-                    menu_button_position = menu_button_proj.rect.topleft
-                else:
-                    # Handle this case accordingly, maybe set a default position or raise a more descriptive error.
-                    menu_button_position = (0, 0)
-
-                menu_proj = next((proj for proj in loaded_projections if isinstance(proj, Menu)), None)
-                if menu_proj:
-                    menu_position = menu_proj.rect.topleft
-                else:
-                    # Handle this case accordingly, maybe set a default position or raise a more descriptive error.
-                    menu_position = (0, 0)
-
-                # Ensure only one Menu and MenuButton instance exists and append them to the projections
-                menu_button = MenuButton(*menu_button_position, 80, 40, "Menu")
-                menu = Menu(*menu_position)
-                projections.extend([menu_button, menu])
-
-                # Append the rest of the loaded projections to the projections list
+                # Append the loaded projections
                 for proj in loaded_projections:
-                    if not isinstance(proj, (Menu, MenuButton)):
-                        projections.append(proj)
+                    projections.append(proj)
 
-                # Re-establish the slider's interaction with graphs and data table
-                loaded_slider = next((proj for proj in projections if isinstance(proj, Slider)), None)
-                loaded_graphs = [proj for proj in projections if isinstance(proj, Graph)]
                 # Re-establish the slider's interaction with graphs and data table
                 loaded_slider = next((proj for proj in projections if isinstance(proj, Slider)), None)
                 loaded_graphs = [proj for proj in projections if isinstance(proj, Graph)]
@@ -127,6 +121,18 @@ while running:
                     if loaded_data_table:
                         loaded_slider.add_observer(loaded_data_table)
 
+                # Reconnect the DaySwitch object to the loaded graphs
+                loaded_day_switch = next((proj for proj in projections if isinstance(proj, DaySwitch)), None)
+
+                if loaded_day_switch:
+                    print("BBBBBBBBBBBBB")
+                    print('LOADED GRAPHS', id(loaded_graphs[0]))
+                    loaded_day_switch.graphs = loaded_graphs
+                    print(id(loaded_day_switch.graphs[0]))
+
+                    day_switch = loaded_day_switch
+
+
             if not GLOBAL_LOCK:
                 dragged_object = next((proj for proj in projections if
                                        proj.rect.collidepoint(event.pos) and hasattr(proj, 'update_position')),
@@ -135,18 +141,6 @@ while running:
 
         elif event.type == pygame.MOUSEBUTTONUP:
             dragging = False
-            if dragged_object and isinstance(dragged_object, Graph):
-                is_overlapping = dragged_object.update_position(0, 0, graphs)
-                if is_overlapping:
-                    for graph in graphs:
-                        if graph != dragged_object and dragged_object.rect.colliderect(graph.rect):
-                            overlap_area = dragged_object.rect.clip(graph.rect).width * dragged_object.rect.clip(
-                                graph.rect).height
-                            if overlap_area > 0.5 * (graph.rect.width * graph.rect.height):
-                                # Adjust dragged_graph's position to perfectly overlap with the graph
-                                dragged_object.x = graph.x
-                                dragged_object.y = graph.y
-                                dragged_object.rect.topleft = (graph.x, graph.y)
             dragged_object = None  # Clear the dragged object
 
 
