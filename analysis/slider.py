@@ -39,8 +39,6 @@ class Slider(UIElement, Observable):
         pygame.draw.rect(screen, self.handle_color, (handle_x, self.y, self.handle_width, self.height))
 
     def handle_events(self, event, is_locked=False):
-        if is_locked:  # Assumes you make GLOBAL_LOCK a class variable of Application
-            return
         handle_x = self.x + (self.current_value - self.min_value) / (self.max_value - self.min_value) * (
                 self.width - self.handle_width)
         handle_rect = pygame.Rect(handle_x, self.y, self.handle_width, self.height)
@@ -50,6 +48,10 @@ class Slider(UIElement, Observable):
                 self.dragging = True
             elif event.button == 3 and self.rect.collidepoint(event.pos):  # Right click on slider
                 self.dragging_position = True
+
+                if is_locked:
+                    self.dragging_position = False
+                    return
 
         elif event.type == pygame.MOUSEBUTTONUP:
             self.dragging = False

@@ -5,8 +5,8 @@ import pandas as pd
 from core.clock import Clock
 from utils.observer_pattern import Observer
 from utils.uiux import UIElement
-# from analysis.slider import Slider
-# from analysis.table import DataTable
+from analysis.slider import Slider
+from analysis.table import DataTable
 import os
 # Colors
 WHITE = (255, 255, 255)
@@ -45,7 +45,7 @@ class Graph(UIElement, Observer):
 
     def __init__(self, is_live=False, data_file=None, column='Price',
                  size_multiplier=1.0, y_offset_percentage=0.6,
-                 x=None, y=None, width=None, height=None, color=(0, 0, 255), title='', original_title=''):
+                 x=None, y=None, width=None, height=None, color=(0, 0, 255), title='', original_title='', strategy_name='Strategy', strategy_active=False):
         """
         Initialize a Graph instance.
 
@@ -106,7 +106,14 @@ class Graph(UIElement, Observer):
 
         # Extract the filename from the data_file path
         self.data_filename = os.path.basename(data_file) if data_file else None
-        print(f"Graph {self.title} positioned at ({self.x}, {self.y})")
+
+        self.strategy_name = "Strategy"  # or any default name for your strategy column
+        self.strategy_active = False
+
+        self.strategy_dir = data_file.split("/")[2]
+
+        # print(self.strategy_dir, 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', data_file)
+
 
     def set_highlight_index(self, index):
         """
@@ -159,6 +166,25 @@ class Graph(UIElement, Observer):
         title_surf = font.render(self.original_title, True, self.color)
         screen.blit(title_surf, (self.x, self.y - 30))
 
+        # Inside the display method, after plotting the main graph data
+        if self.strategy_active and self.strategy_name in self.df.columns:
+            for idx, signal in enumerate(self.df[self.strategy_name]):
+                x_pos = self.x + (self.width / len(self.df) * idx)
+                y_pos = self.y + self.height - (self.height * values_normalized[idx])
+                if signal == 1:  # Buy signal
+                    pygame.draw.circle(screen, (0, 255, 0), (int(x_pos), int(y_pos)),
+                                       self.point_radius)  # Green dot for buy
+                    screen.blit(pygame.font.SysFont(None, 24).render("Buy", True, (0, 255, 0)),
+                                (int(x_pos), int(y_pos) - 20))
+                elif signal == -1:  # Sell signal
+                    pygame.draw.circle(screen, (255, 0, 0), (int(x_pos), int(y_pos)),
+                                       self.point_radius)  # Red dot for sell
+                    screen.blit(pygame.font.SysFont(None, 24).render("Sell", True, (255, 0, 0)),
+                                (int(x_pos), int(y_pos) + 20))
+
+    def toggle_strategy(self):
+        self.strategy_active = not self.strategy_active
+
     def set_data_file(self, day):
         # print("SSSSSS")
         # print(id(self), 'SETTING')
@@ -167,7 +193,9 @@ class Graph(UIElement, Observer):
             return
 
         try:
-            new_path = f"./data/Day{day}/{self.data_filename}"
+            # print("here")
+            new_path = f"./data/{self.strategy_dir}/Day{day}.csv"
+            # print(new_path)
             # print(new_path)
             new_df = pd.read_csv(new_path)
             self.df_path = new_path
@@ -213,6 +241,7 @@ class Graph(UIElement, Observer):
         """
         data = super().serialize()
 
+        # print('SAVING', self.df_path, self.data_filename)
         data.update({
             'data_file': self.df_path,
             'size_multiplier': self.size_multiplier,
@@ -221,7 +250,7 @@ class Graph(UIElement, Observer):
             'height': self.height,
             'color': self.color,
             'original_title': self.original_title,
-            'data_filename': self.data_filename
+            'data_filename': self.data_filename,
         })
         return data
 
@@ -237,8 +266,9 @@ class Graph(UIElement, Observer):
 
         # Construct the default data_file path with 'Day1' and the data_filename.
         default_day = "Day1"
-        data_filename = data.get('data_filename', '')
-        constructed_data_file = os.path.join(f"./data/{default_day}", data_filename)
+        data_filename = data.get('data_file', '')
+        constructed_data_file = data_filename
+
 
         return Graph(
             x=data['x'],

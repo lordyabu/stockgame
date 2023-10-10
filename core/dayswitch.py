@@ -6,7 +6,7 @@ from core.graph import Graph
 
 
 class DaySwitch(UIElement, Observable):
-    def __init__(self, x, y, graphs=[], max_days=99):
+    def __init__(self, x, y, graphs=[], max_days=99, strategy_dir='strategy_zero'):
         super().__init__(x, y)
         self.max_days = max_days
         self.current_day = 1
@@ -24,6 +24,8 @@ class DaySwitch(UIElement, Observable):
         # Define bounding rect for the entire DaySwitch
         total_width = self.arrow_size + 2 * self.padding + self.arrow_size + self.font.size(f"Day {self.max_days}")[0]
         self.rect = pygame.Rect(self.x, self.y, total_width, self.arrow_size)
+
+        self.strategy_dir = strategy_dir
 
     def display(self, screen):
         pygame.draw.polygon(screen, (0, 0, 0), [(self.left_arrow_rect.x + self.arrow_size, self.left_arrow_rect.y),
@@ -65,7 +67,8 @@ class DaySwitch(UIElement, Observable):
             self.current_day = self.max_days
 
         # Check if directory exists, otherwise wrap around
-        while not os.path.exists(f"./data/Day{self.current_day}"):
+        # print(f"./data/{self.strategy_dir}/Day{self.current_day}")
+        while not os.path.exists(f"./data/{self.strategy_dir}/Day{self.current_day}.csv"):
             self.current_day += direction
             if self.current_day > self.max_days:
                 self.current_day = 1
@@ -83,7 +86,8 @@ class DaySwitch(UIElement, Observable):
             'x': self.x,
             'y': self.y,
             'current_day': self.current_day,
-            'max_days': self.max_days
+            'max_days': self.max_days,
+            'strategy_dir': self.strategy_dir
         }
         return data
 
@@ -95,7 +99,9 @@ class DaySwitch(UIElement, Observable):
         current_day = data.get('current_day', 1)
         max_days = data.get('max_days', 99)
 
-        day_switch = DaySwitch(x, y, graphs=graphs, max_days=max_days)
+        strategy_dir = data['strategy_dir']
+
+        day_switch = DaySwitch(x, y, graphs=graphs, max_days=max_days, strategy_dir=strategy_dir)
         day_switch.current_day = current_day
 
         # Ensure that the clickable regions are updated based on the loaded position:

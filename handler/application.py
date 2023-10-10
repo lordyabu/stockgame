@@ -17,7 +17,7 @@ class Application:
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT), pygame.RESIZABLE)
         pygame.display.set_caption("Resizable Window with Clock and Graphs")
         self.GLOBAL_LOCK = False
-        self.initialize_projections()
+        self.initialize_projections('strategy_zero')
 
 
         self.dragging = False
@@ -54,18 +54,18 @@ class Application:
         if loaded_day_switch:
             loaded_day_switch.graphs = loaded_graphs
             self.day_switch = loaded_day_switch
-    def initialize_projections(self):
+    def initialize_projections(self, strategy_dir):
         object_configs = [
             {"class": Clock, "args": (10, 10, 100, 50),
              "kwargs": {"text_color": "black", "border_color": "black", "bg_color": "darkGray"}},
             {"class": Graph,
-             "kwargs": {"is_live": False, "data_file": './data/Day1/PriceDay2.csv', "column": 'Price',
+             "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price1',
                         "size_multiplier": 1.5, "color": (255, 0, 0), "title": "Graph 1", "original_title": "Graph 1"}},
             {"class": Graph,
-             "kwargs": {"is_live": False, "data_file": './data/Day1/PriceDay3.csv', "column": 'Price',
+             "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price2',
                         "size_multiplier": .9, "color": (0, 255, 0), "title": "Graph 2", "original_title": "Graph 2"}},
             {"class": Graph,
-             "kwargs": {"is_live": False, "data_file": './data/Day1/PriceDay1.csv', "column": 'Price',
+             "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price3',
                         "size_multiplier": .9, "color": (0, 0, 255), "title": "Graph 3", "original_title": "Graph 3"}}
         ]
 
@@ -87,7 +87,7 @@ class Application:
         self.menu = Menu(700, 60)
         self.projections.extend([self.menu_button, self.menu])
 
-        self.day_switch = DaySwitch(650, 10, graphs=self.graphs)
+        self.day_switch = DaySwitch(650, 10, graphs=self.graphs, strategy_dir=strategy_dir)
         self.projections.append(self.day_switch)
 
         for graph in self.graphs:
@@ -140,7 +140,7 @@ class Application:
 
     def handle_mouse_motion(self, event, is_locked=False):
         """Handles mouse movements."""
-        if is_locked:
+        if is_locked and not isinstance(self.dragged_object, Slider):
             return
 
         if isinstance(self.dragged_object, MenuButton):
