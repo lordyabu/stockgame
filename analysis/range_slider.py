@@ -12,7 +12,7 @@ class RangeSlider(UIElement, Observable):
 
         self.width = width
         self.height = 20
-        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.rect = pygame.Rect(x, y, self.width, self.height)
 
         self.min_value = min_value
         self.max_value = max_value
@@ -27,49 +27,76 @@ class RangeSlider(UIElement, Observable):
         self.dragging_start = False
         self.dragging_end = False
 
+        self.dragging_position = False
+
     def display(self, screen):
         # Draw the background of the slider
         pygame.draw.rect(screen, self.track_color, self.rect)
 
         # Calculate handle positions
-        start_handle_x = self.x + (self.start_value - self.min_value) / (self.max_value - self.min_value) * (
+        start_handle_x = self.rect.x + (self.start_value - self.min_value) / (self.max_value - self.min_value) * (
                 self.width - self.handle_width)
-        end_handle_x = self.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * (
+        end_handle_x = self.rect.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * (
                 self.width - self.handle_width)
 
         # Draw the handles
         pygame.draw.rect(screen, self.handle_color, (start_handle_x, self.y, self.handle_width, self.height))
         pygame.draw.rect(screen, self.handle_color, (end_handle_x, self.y, self.handle_width, self.height))
 
-    def handle_events(self, event):
-        start_handle_x = self.x + (self.start_value - self.min_value) / (self.max_value - self.min_value) * (
+    def handle_events(self, event, is_locked=False):
+        start_handle_x = self.rect.x + (self.start_value - self.min_value) / (self.max_value - self.min_value) * (
                 self.width - self.handle_width)
-        end_handle_x = self.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * (
+        end_handle_x = self.rect.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * (
                 self.width - self.handle_width)
 
         start_handle_rect = pygame.Rect(start_handle_x, self.y, self.handle_width, self.height)
         end_handle_rect = pygame.Rect(end_handle_x, self.y, self.handle_width, self.height)
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # Left click
-            if start_handle_rect.collidepoint(event.pos):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # Left-click to move the handles
+            if start_handle_rect.collidepoint(event.pos) and event.button == 1:
                 self.dragging_start = True
-            elif end_handle_rect.collidepoint(event.pos):
+            elif end_handle_rect.collidepoint(event.pos) and event.button == 1:
                 self.dragging_end = True
+            # Right-click to move the entire slider
+            elif self.rect.collidepoint(event.pos) and event.button == 3:
+                if is_locked:
+                    self.dragging_position = False
+                    return
+                self.dragging_position = True
 
         elif event.type == pygame.MOUSEBUTTONUP:
             self.dragging_start = False
             self.dragging_end = False
+            self.dragging_position = False
 
         elif event.type == pygame.MOUSEMOTION:
+            prev_start_value = self.start_value  # Store previous values before updating
+            prev_end_value = self.end_value
+
             if self.dragging_start:
                 self.update_value_from_pos(event.pos[0], "start")
             elif self.dragging_end:
                 self.update_value_from_pos(event.pos[0], "end")
 
-            self.update_slider_positions()  # Ensure the minimum gap after updating slider values
+            if self.start_value > self.end_value:  # Check if values have crossed over
+                self.start_value, self.end_value = prev_start_value, prev_end_value  # Revert to previous values
+
+            if self.dragging_position:  # If dragging the entire slider's position
+                self.update_position(*event.rel)
+
+            self.update_slider_positions()
+
+    def update_position(self, dx, dy):
+        """Update the position of the slider."""
+        self.x += dx
+        self.y += dy
+        self.rect.topleft = (self.x, self.y)
+        self.notify_observers((self.start_value, self.end_value))
 
     def update_value_from_pos(self, x, handle_type):
-        relative_x = x - self.x
+        relative_x = x - self.rect.x
+
         value = int(self.min_value + relative_x / (self.width - self.handle_width) * (self.max_value - self.min_value))
         value = max(self.min_value, min(self.max_value, value))
         if handle_type == "start":
@@ -90,6 +117,27 @@ class RangeSlider(UIElement, Observable):
                 self.start_value = self.end_value - MIN_GAP
             elif self.dragging_end:
                 self.end_value = self.start_value + MIN_GAP
+
+
+    def serialize(self):
+        data = super().serialize()  # Get base class serialization data.
+        data.update({
+            "type": "RangeSlider",
+            "width": self.width,
+            "min_value": self.min_value,
+            "max_value": self.max_value,
+            "start_value": self.start_value,
+            "end_value": self.end_value
+        })
+        return data
+
+    @staticmethod
+    def deserialize(data):
+        width = data.get("width", 700)  # Default to 700 if width is not present.
+        range_slider = RangeSlider(data["x"], data["y"], width, data["min_value"], data["max_value"])
+        range_slider.start_value = data.get("start_value", data["min_value"])  # Default to min_value if start_value is not present.
+        range_slider.end_value = data.get("end_value", data["max_value"])    # Default to max_value if end_value is not present.
+        return range_slider
 
 
 # Colors

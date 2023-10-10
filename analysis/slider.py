@@ -79,6 +79,16 @@ class Slider(UIElement, Observable):
         self.current_value = max(self.min_value, min(self.max_value, self.current_value))
         self.notify_observers(self.current_value)
 
+    def update(self, value):
+        # print("UPDATING", value)
+        """Update the slider based on received values."""
+        if isinstance(value, tuple):  # Indicates range values
+            self.min_value, self.max_value = value
+            self.current_value = max(self.min_value, min(self.max_value, self.current_value))
+        else:
+            relative_x = (value - self.min_value) / (self.max_value - self.min_value) * (self.width - self.handle_width)
+            self.update_value_from_pos(self.x + relative_x)
+
     def serialize(self):
         data = super().serialize()  # Get base class serialization data.
         data.update({
@@ -123,7 +133,7 @@ def main():
     test_slider.add_observer(test_graph1)
     test_slider.add_observer(test_graph2)
 
-    value_range_slider = Slider(x=50, y=550, width=700, min_value=0, max_value=len(test_graph1.df) - 1)
+    value_range_slider = ValueRangeSlider(x=50, y=550, width=700, min_value=0, max_value=len(test_graph1.df) - 1)
     value_range_slider.add_observer(test_graph1)  # Link the range slider to the graph
 
     # DataTable instance

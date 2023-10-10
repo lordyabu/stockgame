@@ -8,6 +8,7 @@ from core.presets import save_preset, load_preset
 from analysis.slider import Slider
 from analysis.table import DataTable
 from core.dayswitch import DaySwitch
+from analysis.range_slider import RangeSlider
 
 class Application:
 
@@ -39,6 +40,7 @@ class Application:
 
         # Re-establish the slider's interaction with graphs and data table
         loaded_slider = next((proj for proj in self.projections if isinstance(proj, Slider)), None)
+        loaded_range_slider = next((proj for proj in self.projections if isinstance(proj, RangeSlider)), None)
         loaded_graphs = [proj for proj in self.projections if isinstance(proj, Graph)]
         loaded_data_table = next((proj for proj in self.projections if isinstance(proj, DataTable)), None)
 
@@ -48,6 +50,10 @@ class Application:
                 loaded_slider.add_observer(graph)
             if loaded_data_table:
                 loaded_slider.add_observer(loaded_data_table)
+
+        if loaded_range_slider:
+            for graph in loaded_graphs:
+                loaded_range_slider.add_observer(graph)
 
         # Reconnect the DaySwitch object to the loaded graphs
         loaded_day_switch = next((proj for proj in self.projections if isinstance(proj, DaySwitch)), None)
@@ -90,8 +96,13 @@ class Application:
         self.day_switch = DaySwitch(650, 10, graphs=self.graphs, strategy_dir=strategy_dir)
         self.projections.append(self.day_switch)
 
+        self.range_slider = RangeSlider(50, 500, 700, 0, max_length - 1)  # Assuming a suitable position and width
+        self.projections.append(self.range_slider)
+
         for graph in self.graphs:
+            graph.add_observer(self.slider)
             self.slider.add_observer(graph)
+            self.range_slider.add_observer(graph)
 
     def handle_mouse_down(self, event):
         dragged_object = None
@@ -122,6 +133,11 @@ class Application:
             dragged_object = self.slider
         # Make sure the slider isn't set as dragged_object on left-click
         elif event.button == 1 and self.slider.rect.collidepoint(event.pos):
+            dragged_object = None
+
+        if event.button == 3 and self.range_slider.rect.collidepoint(event.pos) and not self.GLOBAL_LOCK:
+            dragged_object = self.range_slider
+        elif event.button == 1 and self.range_slider.rect.collidepoint(event.pos):
             dragged_object = None
 
         # If we found an object to drag, set the dragging flag
@@ -187,14 +203,18 @@ class Application:
                 for proj in self.projections:
                     if isinstance(proj, Slider):
                         proj.handle_events(event, self.GLOBAL_LOCK)
+                    if isinstance(proj, RangeSlider):
+                        proj.handle_events(event, self.GLOBAL_LOCK)
 
             # Display logic
             self.screen.fill((255, 255, 255))
             for proj in self.projections:
+
                 if isinstance(proj, Graph):
                     proj.display(self.screen, self.graphs)
                 elif not isinstance(proj, (Menu, MenuButton)):
                     proj.display(self.screen)
+
             self.menu_button.display(self.screen)
             self.menu.display(self.screen)
             pygame.display.flip()

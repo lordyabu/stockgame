@@ -9,6 +9,7 @@ from analysis.slider import Slider
 from analysis.table import DataTable
 from core.dayswitch import DaySwitch
 import os
+from analysis.range_slider import RangeSlider
 def save_preset(projections, filename='presets/preset.json'):
     with open(filename, 'w') as f:
         json.dump([proj.serialize() for proj in projections], f)
@@ -49,6 +50,10 @@ def load_preset(filename='presets/preset.json', font=None):
             loaded_day_switch = DaySwitch.deserialize(proj_data)
             projections.append(loaded_day_switch)
 
+        elif proj_data['type'] == 'RangeSlider':
+            loaded_range_slider = RangeSlider.deserialize(proj_data)
+            projections.append(loaded_range_slider)
+
     if font is None:
         font = pygame.font.SysFont(None, 24)  # Or any default you'd like
 
@@ -59,6 +64,7 @@ def load_preset(filename='presets/preset.json', font=None):
     # Connect Slider to Graphs and DataTable
     if loaded_slider:
         for graph in loaded_graphs:
+            graph.add_observer(loaded_slider)
             loaded_slider.add_observer(graph)
 
         if loaded_data_table:
@@ -93,16 +99,23 @@ def load_project_state(projections):
     data_table = next((proj for proj in projections if isinstance(proj, DataTable)), None)
     day_switch = next((proj for proj in projections if isinstance(proj, DaySwitch)), None)
     graphs = [proj for proj in projections if isinstance(proj, Graph)]
+    range_slider = next((proj for proj in projections if isinstance(proj, RangeSlider)), None)
+
 
     # Reconnecting the observers
     if slider and data_table:
         slider.add_observer(data_table)
     if slider and graphs:
         for graph in graphs:
+            graph.add_observer(slider)
             slider.add_observer(graph)
 
     # Reconnect the DaySwitch object to the loaded graphs
     if day_switch and graphs:
         day_switch.graphs = graphs
 
-    return slider, menu_button, menu, data_table, day_switch, graphs
+    if range_slider and graphs:
+        for graph in graphs:
+            range_slider.add_observer(graph)
+
+    return slider, range_slider, menu_button, menu, data_table, day_switch, graphs

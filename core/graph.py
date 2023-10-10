@@ -3,7 +3,7 @@ from utils.strategy_rules import Strategy
 import pygame
 import pandas as pd
 from core.clock import Clock
-from utils.observer_pattern import Observer
+from utils.observer_pattern import Observer, Observable
 from utils.uiux import UIElement
 from analysis.slider import Slider
 from analysis.table import DataTable
@@ -19,7 +19,7 @@ def darken_color(color, factor=0.7):
     """Returns a darker shade of the provided color."""
     return tuple([int(c * factor) for c in color])
 
-class Graph(UIElement, Observer):
+class Graph(UIElement, Observer, Observable):
     """
     A class for plotting and displaying graphs on a Pygame screen.
 
@@ -62,6 +62,7 @@ class Graph(UIElement, Observer):
         """
         UIElement.__init__(self, x, y)
         Observer.__init__(self)
+        Observable.__init__(self)
         self.is_live = is_live
         self.size_multiplier = size_multiplier
         try:
@@ -136,6 +137,7 @@ class Graph(UIElement, Observer):
         return overlapping_graphs
 
     def display(self, screen, all_graphs=[]):
+        # print(self.highlight_index)
 
         # print(self.display_range)
         # print(id(self), 'DISPLAYING')
@@ -155,6 +157,31 @@ class Graph(UIElement, Observer):
                 values_normalized = [0.5 for _ in displayed_data[self.column]]  # Middle of the graph
             else:
                 values_normalized = [(value - min_val) / (max_val - min_val) for value in displayed_data[self.column]]
+
+            # Y-axis value rendering
+            if max_val == min_val:
+                mid_val = max_val
+            else:
+                mid_val = (max_val + min_val) / 2
+
+            # Define y positions for text
+            y_pos_max = self.y + 5  # 5 pixels from the top edge of the graph
+            y_pos_mid = self.y + self.height / 2 - 12  # centered in the middle, adjusted for text height
+            y_pos_min = self.y + self.height - 25  # 25 pixels from the bottom edge to account for text height
+
+            # Render the text
+            text_max = font.render(f"{max_val:.2f}", True, self.color)
+            text_mid = font.render(f"{mid_val:.2f}", True, self.color)
+            text_min = font.render(f"{min_val:.2f}", True, self.color)
+
+            # Determine the x position (inside the graph aligned to the right)
+            x_pos_text = self.x + self.width - 10 - max(text_max.get_width(), text_mid.get_width(),
+                                                        text_min.get_width())
+
+            # Blit the text
+            screen.blit(text_max, (x_pos_text, y_pos_max))
+            screen.blit(text_mid, (x_pos_text, y_pos_mid))
+            screen.blit(text_min, (x_pos_text, y_pos_min))
 
             prev_x_pos = None
             prev_y_pos = None
@@ -246,18 +273,19 @@ class Graph(UIElement, Observer):
 
     def update(self, value):
         """Called when the slider's value changes."""
-        if isinstance(value, tuple):
-            # Range slider updates
+        if isinstance(value, tuple):  # Range slider updates
             start_idx, end_idx = value
             self.update_range(start_idx, end_idx)
+
+            # Notify observers (which includes the single point slider) about the new range.
+            # print("ADSD")
+            self.notify_observers(value)
         else:
             # Single point slider updates
             if self.df is not None:
                 self.highlight_index = int(value)
                 # Ensure the value is within the dataframe's bounds.
                 self.highlight_index = max(0, min(len(self.df) - 1, self.highlight_index))
-
-
 
     def update_range(self, start_idx, end_idx):
         # print("USING THIS HERE")
