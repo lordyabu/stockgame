@@ -104,34 +104,85 @@ WHITE = (255, 255, 255)
 # Screen dimensions
 WIDTH, HEIGHT = 800, 600
 
-if __name__ == "__main__":
+def main():
     pygame.init()
     pygame.font.init()
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption('Graph Test with Slider')
+    pygame.display.set_caption('Interactive Data Visualization')
 
-    # Instantiate graph and make it observe the slider
-    test_graph = Graph(data_file='./data/PriceDay3.csv')  # Replace with the correct path if needed
+    # Graph instances with colors and titles
+    test_graph1 = Graph(data_file='./data/strategy_zero/Day1.csv', column='Price1', color=(255, 0, 0), title="Graph 1", strategy_active=True)
+    test_graph2 = Graph(data_file='./data/strategy_zero/Day1.csv', column='Price2', color=(0, 255, 0), title="Graph 2", strategy_active=False)
 
-    if test_graph.df is not None and test_graph.column in test_graph.df.columns:
-        slider_max_value = len(test_graph.df[test_graph.column]) - 1
-    else:
-        slider_max_value = 100  # Default value if the DataFrame is not available.
+    graphs = [test_graph1, test_graph2]
 
-    slider = Slider(100, 550, 400, 0, slider_max_value)
-    slider.add_observer(test_graph)
+    # Slider instances
+    test_slider = Slider(x=50, y=500, width=700, min_value=0,
+                         max_value=max(len(test_graph1.df), len(test_graph2.df)) - 1)
+    test_slider.add_observer(test_graph1)
+    test_slider.add_observer(test_graph2)
+
+    value_range_slider = Slider(x=50, y=550, width=700, min_value=0, max_value=len(test_graph1.df) - 1)
+    value_range_slider.add_observer(test_graph1)  # Link the range slider to the graph
+
+    # DataTable instance
+    font = pygame.font.SysFont(None, 24)
+    data_table = DataTable(x=650, y=50, graphs=graphs, font=font)
+    test_slider.add_observer(data_table)
+
+    dragging = False
+    dragged_graph = None
 
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            slider.handle_events(event)
+
+            # Handle events for the existing slider
+            test_slider.handle_events(event)
+
+            # Handle events for the new value range slider
+            value_range_slider.handle_events(event)
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left mouse button
+                    for graph in graphs:
+                        if graph.rect.collidepoint(event.pos):
+                            dragging = True
+                            dragged_graph = graph
+                            break
+            elif event.type == pygame.MOUSEBUTTONUP:
+                dragging = False
+                if dragged_graph:
+                    is_overlapping = dragged_graph.update_position(0, 0, graphs)
+                    if is_overlapping:
+                        for graph in graphs:
+                            if graph != dragged_graph and dragged_graph.rect.colliderect(graph.rect):
+                                overlap_area = dragged_graph.rect.clip(graph.rect).width * dragged_graph.rect.clip(
+                                    graph.rect).height
+                                if overlap_area > 0.5 * (graph.rect.width * graph.rect.height):
+                                    # Adjust dragged_graph's position to perfectly overlap with the graph
+                                    dragged_graph.x = graph.x
+                                    dragged_graph.y = graph.y
+                                    dragged_graph.rect.topleft = (graph.x, graph.y)
+                dragged_graph = None  # Clear the dragged graph
+
+            elif event.type == pygame.MOUSEMOTION and dragging:
+                other_graphs = [graph for graph in graphs if graph != dragged_graph]
+                dragged_graph.update_position(event.rel[0], event.rel[1], other_graphs)
 
         screen.fill(WHITE)
-        test_graph.display(screen)
-        slider.display(screen)  # Ensure you're drawing the slider
+        for current_graph in graphs:
+            current_graph.display(screen, graphs)
+        test_slider.display(screen)
+        value_range_slider.display(screen)  # Display the value range slider
+        data_table.display(screen)
         pygame.display.flip()
 
     pygame.quit()
+
+
+if __name__ == "__main__":
+    main()

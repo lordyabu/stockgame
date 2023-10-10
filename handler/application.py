@@ -60,13 +60,13 @@ class Application:
              "kwargs": {"text_color": "black", "border_color": "black", "bg_color": "darkGray"}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price1',
-                        "size_multiplier": 1.5, "color": (255, 0, 0), "title": "Graph 1", "original_title": "Graph 1"}},
+                        "size_multiplier": 1.5, "color": (255, 0, 0), "title": "Graph 1", "original_title": "Graph 1", "strategy_active": True}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price2',
-                        "size_multiplier": .9, "color": (0, 255, 0), "title": "Graph 2", "original_title": "Graph 2"}},
+                        "size_multiplier": .9, "color": (0, 255, 0), "title": "Graph 2", "original_title": "Graph 2", "strategy_active": True}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price3',
-                        "size_multiplier": .9, "color": (0, 0, 255), "title": "Graph 3", "original_title": "Graph 3"}}
+                        "size_multiplier": .9, "color": (0, 0, 255), "title": "Graph 3", "original_title": "Graph 3", "strategy_active": True}}
         ]
 
         self.projections = [config["class"](*config.get("args", ()), **config["kwargs"]) for config in object_configs]

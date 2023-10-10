@@ -1,5 +1,5 @@
 import time
-
+from utils.strategy_rules import Strategy
 import pygame
 import pandas as pd
 from core.clock import Clock
@@ -45,7 +45,8 @@ class Graph(UIElement, Observer):
 
     def __init__(self, is_live=False, data_file=None, column='Price',
                  size_multiplier=1.0, y_offset_percentage=0.6,
-                 x=None, y=None, width=None, height=None, color=(0, 0, 255), title='', original_title='', strategy_name='Strategy', strategy_active=False):
+                 x=None, y=None, width=None, height=None, color=(0, 0, 255),
+                 title='', original_title='', strategy_active=False, strategy_name='Strategy'):
         """
         Initialize a Graph instance.
 
@@ -107,13 +108,18 @@ class Graph(UIElement, Observer):
         # Extract the filename from the data_file path
         self.data_filename = os.path.basename(data_file) if data_file else None
 
-        self.strategy_name = "Strategy"  # or any default name for your strategy column
+        self.strategy_name = strategy_name  # or any default name for your strategy column
         self.strategy_active = False
 
         self.strategy_dir = data_file.split("/")[2]
 
-        # print(self.strategy_dir, 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', data_file)
+        # Initialize the strategy
+        self.strategy = Strategy()
 
+        # Set the strategy_active attribute
+        self.strategy_active = strategy_active
+
+        self.display_range = (0, len(self.df) - 1) if self.df is not None else (0, 0)
 
     def set_highlight_index(self, index):
         """
@@ -130,6 +136,8 @@ class Graph(UIElement, Observer):
         return overlapping_graphs
 
     def display(self, screen, all_graphs=[]):
+
+        # print(self.display_range)
         # print(id(self), 'DISPLAYING')
         # Draw the rectangle boundary of the graph
         pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, self.width, self.height), 2)
@@ -137,14 +145,27 @@ class Graph(UIElement, Observer):
 
         # Plot data if df exists
         if self.df is not None:
-            max_val = self.df[self.column].max()
-            min_val = self.df[self.column].min()
-            values_normalized = [(value - min_val) / (max_val - min_val) for value in self.df[self.column]]
+            start_idx, end_idx = self.display_range
+            # print(start_idx, end_idx)
+            displayed_data = self.df.iloc[start_idx:end_idx + 1]
+
+            max_val = displayed_data[self.column].max()
+            min_val = displayed_data[self.column].min()
+            if max_val == min_val:
+                values_normalized = [0.5 for _ in displayed_data[self.column]]  # Middle of the graph
+            else:
+                values_normalized = [(value - min_val) / (max_val - min_val) for value in displayed_data[self.column]]
+
             prev_x_pos = None
             prev_y_pos = None
             for idx, value in enumerate(values_normalized):
-                x_pos = self.x + (self.width / len(self.df) * idx)
+                relative_idx = idx
+
+                x_pos = self.x + (self.width / (len(displayed_data) - 1) * relative_idx) if len(
+                    displayed_data) > 1 else self.x
+
                 y_pos = self.y + self.height - (self.height * value)
+                # (x_pos, y_pos, prev_x_pos, prev_y_pos)
                 if prev_x_pos is not None:
                     pygame.draw.line(screen, self.color, (int(prev_x_pos), int(prev_y_pos)), (int(x_pos), int(y_pos)),
                                      2)
@@ -153,12 +174,14 @@ class Graph(UIElement, Observer):
 
             # Display a point for the highlighted index
             if self.highlight_index is not None and 0 <= self.highlight_index < len(self.df):
-                x_pos = self.x + (self.width / len(self.df) * self.highlight_index)
+                relative_idx = self.highlight_index - start_idx
+                x_pos = self.x + (self.width / (len(displayed_data) - 1) * relative_idx) if len(
+                    displayed_data) > 1 else self.x
+
                 value = self.df[self.column].iloc[self.highlight_index]
                 value_normalized = (value - min_val) / (max_val - min_val)
                 y_pos = self.y + self.height - (self.height * value_normalized)
-                pygame.draw.circle(screen, (255, 0, 0), (int(x_pos), int(y_pos)),
-                                   self.point_radius)  # Drawing a red dot
+                pygame.draw.circle(screen, (0, 0, 0), (int(x_pos), int(y_pos)), self.point_radius)
 
         self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
 
@@ -166,24 +189,24 @@ class Graph(UIElement, Observer):
         title_surf = font.render(self.original_title, True, self.color)
         screen.blit(title_surf, (self.x, self.y - 30))
 
-        # Inside the display method, after plotting the main graph data
-        if self.strategy_active and self.strategy_name in self.df.columns:
-            for idx, signal in enumerate(self.df[self.strategy_name]):
-                x_pos = self.x + (self.width / len(self.df) * idx)
-                y_pos = self.y + self.height - (self.height * values_normalized[idx])
-                if signal == 1:  # Buy signal
-                    pygame.draw.circle(screen, (0, 255, 0), (int(x_pos), int(y_pos)),
-                                       self.point_radius)  # Green dot for buy
-                    screen.blit(pygame.font.SysFont(None, 24).render("Buy", True, (0, 255, 0)),
+        strategy = Strategy()  # Initialize your strategy instance
+
+        if self.strategy and self.strategy_active and self.strategy_name in self.df.columns:
+            for idx, (value, signal) in enumerate(zip(values_normalized, displayed_data[self.strategy_name])):
+                x_pos = self.x + (self.width / (len(displayed_data) - 1) * idx) if len(displayed_data) > 1 else self.x
+
+                y_pos = self.y + self.height - (self.height * value)
+
+                color, label = strategy.get_signal_display_info(signal)
+
+                if color is not None:
+                    pygame.draw.circle(screen, color, (int(x_pos), int(y_pos)), self.point_radius)
+                    screen.blit(pygame.font.SysFont(None, 24).render(label, True, color),
                                 (int(x_pos), int(y_pos) - 20))
-                elif signal == -1:  # Sell signal
-                    pygame.draw.circle(screen, (255, 0, 0), (int(x_pos), int(y_pos)),
-                                       self.point_radius)  # Red dot for sell
-                    screen.blit(pygame.font.SysFont(None, 24).render("Sell", True, (255, 0, 0)),
-                                (int(x_pos), int(y_pos) + 20))
 
     def toggle_strategy(self):
-        self.strategy_active = not self.strategy_active
+        if self.strategy:
+            self.strategy.toggle_active()
 
     def set_data_file(self, day):
         # print("SSSSSS")
@@ -223,11 +246,31 @@ class Graph(UIElement, Observer):
 
     def update(self, value):
         """Called when the slider's value changes."""
-        # Update the highlight index based on the received value.
+        if isinstance(value, tuple):
+            # Range slider updates
+            start_idx, end_idx = value
+            self.update_range(start_idx, end_idx)
+        else:
+            # Single point slider updates
+            if self.df is not None:
+                self.highlight_index = int(value)
+                # Ensure the value is within the dataframe's bounds.
+                self.highlight_index = max(0, min(len(self.df) - 1, self.highlight_index))
+
+
+
+    def update_range(self, start_idx, end_idx):
+        # print("USING THIS HERE")
+        """Called when the range slider's value changes."""
+        self.set_display_range(start_idx, end_idx)
+
+    def set_display_range(self, start_idx, end_idx):
+        """Update the graph's displayed range."""
         if self.df is not None:
-            self.highlight_index = int(value)
-            # Ensure the value is within the dataframe's bounds.
-            self.highlight_index = max(0, min(len(self.df) - 1, self.highlight_index))
+            max_idx = len(self.df) - 1
+            start_idx = max(0, min(max_idx, start_idx))
+            end_idx = max(0, min(max_idx, end_idx))
+            self.display_range = (start_idx, end_idx)
 
     def update_day(self, day_value):
         # Handle the change in day and update the graph's data accordingly.
@@ -251,6 +294,8 @@ class Graph(UIElement, Observer):
             'color': self.color,
             'original_title': self.original_title,
             'data_filename': self.data_filename,
+            'strategy_name': self.strategy_name,
+            'strategy_active': self.strategy_active
         })
         return data
 
@@ -279,7 +324,9 @@ class Graph(UIElement, Observer):
             column=data.get('column', 'Price'),
             size_multiplier=data['size_multiplier'],
             color=data['color'],
-            original_title=data['original_title']
+            original_title=data['original_title'],
+            strategy_active=data['strategy_active'],
+            strategy_name=data['strategy_name']
         )
 
 
@@ -298,8 +345,8 @@ def main():
     pygame.display.set_caption('Interactive Data Visualization')
 
     # Graph instances with colors and titles
-    test_graph1 = Graph(data_file='./data/PriceDay3.csv', color=(255, 0, 0), title="Graph 1")
-    test_graph2 = Graph(data_file='./data/PriceDay3.csv', color=(0, 255, 0), title="Graph 2")
+    test_graph1 = Graph(data_file='./data/strategy_zero/Day1.csv', column='Price1', color=(255, 0, 0), title="Graph 1", strategy_active=True)
+    test_graph2 = Graph(data_file='./data/strategy_zero/Day1.csv', column='Price2', color=(0, 255, 0), title="Graph 2", strategy_active=False)
 
     graphs = [test_graph1, test_graph2]
 
