@@ -183,6 +183,21 @@ class Graph(UIElement, Observer, Observable):
             screen.blit(text_mid, (x_pos_text, y_pos_mid))
             screen.blit(text_min, (x_pos_text, y_pos_min))
 
+            # Extract time values from the DateTime column
+            time_values = displayed_data['DateTime'].str.split(' ').str[1].tolist()
+
+            # Determine the number of time labels to display based on size_multiplier
+            num_intervals = int(self.size_multiplier * 7)  # Multiplying by 7 as a baseline number of intervals
+            num_intervals = max(3, min(num_intervals, 7))  # Ensure between 3 and 7 labels are shown
+
+            interval_step = max(len(time_values) // num_intervals, 1)  # Ensure it's at least 1
+
+            # Displaying time values on the X-axis at the determined intervals
+            for idx in range(0, len(time_values), interval_step):
+                x_pos = self.x + (self.width / (len(displayed_data) - 1) * idx)
+                time_text = font.render(time_values[idx], True, self.color)
+                screen.blit(time_text, (x_pos - time_text.get_width() / 2, self.y + self.height + 5))
+
             prev_x_pos = None
             prev_y_pos = None
             for idx, value in enumerate(values_normalized):

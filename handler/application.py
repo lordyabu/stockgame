@@ -99,6 +99,8 @@ class Application:
         self.range_slider = RangeSlider(50, 500, 700, 0, max_length - 1)  # Assuming a suitable position and width
         self.projections.append(self.range_slider)
 
+        self.background_color = (50, 50, 75)
+
         for graph in self.graphs:
             graph.add_observer(self.slider)
             self.slider.add_observer(graph)
@@ -207,7 +209,7 @@ class Application:
                         proj.handle_events(event, self.GLOBAL_LOCK)
 
             # Display logic
-            self.screen.fill((255, 255, 255))
+            self.screen.fill(self.background_color)
             for proj in self.projections:
 
                 if isinstance(proj, Graph):

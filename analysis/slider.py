@@ -85,6 +85,7 @@ class Slider(UIElement, Observable):
         if isinstance(value, tuple):  # Indicates range values
             self.min_value, self.max_value = value
             self.current_value = max(self.min_value, min(self.max_value, self.current_value))
+            self.notify_observers(self.current_value)
         else:
             relative_x = (value - self.min_value) / (self.max_value - self.min_value) * (self.width - self.handle_width)
             self.update_value_from_pos(self.x + relative_x)
