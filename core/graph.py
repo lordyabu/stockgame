@@ -285,7 +285,6 @@ class Graph(UIElement, Observer, Observable):
 
             max_val = displayed_data[self.column].max()
             min_val = displayed_data[self.column].min()
-            denominator = max_val - min_val
             if max_val == min_val:
                 values_normalized = [0.5 for _ in displayed_data[self.column]]  # Middle of the graph
             else:
@@ -298,37 +297,40 @@ class Graph(UIElement, Observer, Observable):
                 mid_val = (max_val + min_val) / 2
 
             if self.bar_chart:
-                ohlc_data = displayed_data.resample('5T').agg({self.column: ['first', 'max', 'min', 'last']})
+                # Resample the displayed data for 5-minute OHLC bars
+                ohlc_data = displayed_data.resample('5T').agg({
+                    self.column: ['first', 'max', 'min', 'last']
+                })
                 ohlc_data.columns = ['Open', 'High', 'Low', 'Close']
-                ohlc_data.dropna(inplace=True)
+                ohlc_data.dropna(inplace=True)  # drop any empty intervals
 
                 bar_width = max(1, self.width / len(ohlc_data) - 2)
-                width_ratio = self.width / (len(ohlc_data) - 1)
 
-                transparency = 128  # You can adjust this value. 0 is fully transparent, 255 is opaque.
+                # Inside the loop where you're iterating over the OHLC data:
+                for idx, (timestamp, row) in enumerate(ohlc_data.iterrows()):
+                    x_pos = self.x + (self.width / (len(ohlc_data) - 1) * idx)
 
-                for idx, (_, row) in enumerate(ohlc_data.iterrows()):
-                    x_pos = self.x + width_ratio * idx
-                    y_values = [
-                        self.y + self.height - (self.height * (row[key] - min_val) / denominator)
-                        for key in ['Open', 'High', 'Low', 'Close']
-                    ]
+                    y_open = self.y + self.height - (self.height * (row['Open'] - min_val) / (max_val - min_val))
+                    y_high = self.y + self.height - (self.height * (row['High'] - min_val) / (max_val - min_val))
+                    y_low = self.y + self.height - (self.height * (row['Low'] - min_val) / (max_val - min_val))
+                    y_close = self.y + self.height - (self.height * (row['Close'] - min_val) / (max_val - min_val))
 
-                    current_color = (0, 255, 0) if row['Close'] >= row['Open'] else (
-                        255, 0, 0) if self.prof_coloring else self.color
+                    # Determine color
+                    if self.prof_coloring:
+                        current_color = (0, 255, 0) if row['Close'] >= row['Open'] else (255, 0, 0)
+                    else:
+                        current_color = self.color
 
                     # Draw vertical line from Low to High
-                    pygame.draw.line(screen, current_color, (int(x_pos), int(y_values[2])),
-                                     (int(x_pos), int(y_values[1])), 1)
+                    pygame.draw.line(screen, current_color, (int(x_pos), int(y_low)), (int(x_pos), int(y_high)), 1)
 
-                    # Drawing a transparent rectangle for the Open and Close prices
-                    temp_surface = pygame.Surface((bar_width, abs(y_values[0] - y_values[3])))
-                    temp_surface.fill(current_color)
-                    temp_surface.set_alpha(transparency)
-
-                    # Adjust positioning based on the Open and Close values
-                    rect_y = min(y_values[0], y_values[3])
-                    screen.blit(temp_surface, (int(x_pos - bar_width / 2), int(rect_y)))
+                    # Draw a rectangle for the Open and Close prices.
+                    if row['Close'] >= row['Open']:
+                        pygame.draw.rect(screen, current_color,
+                                         (int(x_pos - bar_width / 2), int(y_open), bar_width, int(y_close - y_open)))
+                    else:
+                        pygame.draw.rect(screen, current_color,
+                                         (int(x_pos - bar_width / 2), int(y_close), bar_width, int(y_open - y_close)))
 
             # Define y positions for text
             y_pos_max = self.y + 5  # 5 pixels from the top edge of the graph
