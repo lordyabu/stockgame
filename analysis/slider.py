@@ -44,12 +44,18 @@ class Slider(UIElement, Observable):
     def handle_events(self, event, is_locked=False):
         proportion = (self.current_value - self.min_value) / (self.max_value - self.min_value)
         handle_x = self.x + proportion * (self.width - self.handle_width) + self.radius
-        handle_rect = pygame.Rect(handle_x - self.radius, self.y - self.radius, self.handle_width, self.handle_width)
+        padding = 10
+        handle_rect = pygame.Rect(handle_x - self.radius - padding, self.y - self.radius - padding,
+                                  self.handle_width + 2 * padding, self.handle_width + 2 * padding)
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1 and handle_rect.collidepoint(event.pos):  # Left click on handle
+            if (event.button == 1 or event.button == 3) and handle_rect.collidepoint(
+                    event.pos):  # Left or right click on handle
+
                 self.dragging = True
-            elif event.button == 3 and self.rect.collidepoint(event.pos):  # Right click on slider
+            elif (event.button == 1 or event.button == 3) and self.rect.collidepoint(
+                    event.pos):  # Left or right click on slider
+                # Right click on slider
                 self.dragging_position = True
 
                 if is_locked:

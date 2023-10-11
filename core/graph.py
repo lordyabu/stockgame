@@ -5,9 +5,9 @@ import pandas as pd
 from core.clock import Clock
 from utils.observer_pattern import Observer, Observable
 from utils.uiux import UIElement
-from analysis.slider import Slider
+# from analysis.slider import Slider
 from utils.mini_button import TextButton
-from analysis.table import DataTable
+# from analysis.table import DataTable
 import os
 # Colors
 WHITE = (255, 255, 255)

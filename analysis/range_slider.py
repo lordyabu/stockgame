@@ -101,19 +101,17 @@ class RangeSlider(UIElement, Observable):
         self.rect.topleft = (self.x, self.y)
         self.notify_observers((self.start_value, self.end_value))
 
-
     def update_value_from_pos(self, x, handle_type):
         relative_x = x - self.rect.x
-
         value = int(self.min_value + relative_x / (self.width - self.handle_width) * (self.max_value - self.min_value))
         value = max(self.min_value, min(self.max_value, value))
 
+        MIN_GAP = 5  # Ensure at least one data point between the two sliders
+
         if handle_type == "start":
-            # Ensure start_value doesn't surpass end_value
-            self.start_value = min(value, self.end_value - 1)
+            self.start_value = min(value, self.end_value - MIN_GAP)
         elif handle_type == "end":
-            # Ensure end_value doesn't go below start_value
-            self.end_value = max(value, self.start_value + 1)
+            self.end_value = max(value, self.start_value + MIN_GAP)
 
         self.notify_observers((self.start_value, self.end_value))
 

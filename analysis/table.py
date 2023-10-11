@@ -1,7 +1,8 @@
+import pandas as pd
 import pygame
 from utils.observer_pattern import Observable, Observer
-# from core.graph import Graph
-# from analysis.slider import Slider
+from core.graph import Graph
+from analysis.slider import Slider
 from utils.uiux import UIElement
 # Colors
 WHITE = (255, 255, 255)
@@ -11,41 +12,171 @@ WIDTH, HEIGHT = 800, 600
 
 class DataTable(UIElement, Observer):
     def __init__(self, x, y, graphs, font, initial_index=0):
-        self.x = x
-        self.y = y
-        self.graphs = graphs  # A list of graphs
+        super().__init__(x, y)
+        self.graphs = graphs
         self.font = font
         self.current_values = {}
 
-        # Define the rectangle to represent the position and size
-        self.width = 150  # Adjust this value based on your needs
-        self.height = len(graphs) * 20 + 20  # 20 pixel gap between each value, adjust this if necessary
+        self.row_height = 20
+        self.visible_rows = 50  # Number of rows you want to display at once.
+
+        self.height = self.row_height * (self.visible_rows + 1)  # +1 for the headers
+        # Assuming an average width of 60 pixels for the DateTime column and each graph column
+        column_widths = [60 for _ in range(len(graphs) + 1)]  # +1 for the DateTime column
+
+        # Now, let's calculate the total width required:
+        self.width = sum(column_widths)
+
+        # For column spacing, use:
+        self.column_spacing = 10  # 10 pixels between columns, adjust as needed
+
+        # Add column spacing to width:
+        self.width += (len(graphs)) * self.column_spacing  # Add spacing for all but the last column
+
+        self.alternate_color = (235, 235, 235)  # Light gray for alternating rows
+
+        self.current_index = initial_index
+
+        self.dragging = False
+
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+        self.column_stats = {}
+
 
         self.set_values(initial_index)
 
-    def set_values(self, index):
-        self.current_values.clear()  # Clear any previous values
         for graph in self.graphs:
-            if graph.df is not None and 0 <= index < len(graph.df):
-                unique_key = f"{graph.df_path}_{graph.column}"  # Create a unique key combining both file name and column name
-                value = graph.df[graph.column].iloc[index]
-                # Also store the graph's color with the value
-                self.current_values[unique_key] = (value, graph.color)
+            high_val = graph.df[graph.column].max()
+            low_val = graph.df[graph.column].min()
+            avg_val = graph.df[graph.column].mean()
+
+            self.column_stats[graph.column] = (high_val, avg_val, low_val)
+
+        self.highlighted_row = -1  # Initially no row is highlighted
+
+    def get_gradient_color(self, value, high_val, avg_val, low_val):
+        # Assuming you want a red-to-yellow-to-green gradient
+        high_color = pygame.Color('gray24')
+        avg_color = pygame.Color('gray50')
+        low_color = pygame.Color('white')
+
+        # Determine which segment of the gradient we're in and interpolate
+        if value >= avg_val:
+            weight = (value - avg_val) / (high_val - avg_val)
+            color = self.interpolate_color(avg_color, high_color, weight)
+        else:
+            weight = (value - low_val) / (avg_val - low_val)
+            color = self.interpolate_color(low_color, avg_color, weight)
+
+        return color
+
+    def interpolate_color(self, color1, color2, weight):
+        # Linearly interpolate between the two RGB values
+        r = color1.r * (1 - weight) + color2.r * weight
+        g = color1.g * (1 - weight) + color2.g * weight
+        b = color1.b * (1 - weight) + color2.b * weight
+
+        return pygame.Color(int(r), int(g), int(b))
+
+    def set_values(self, index):
+        self.current_values.clear()
+
+        start_index = index - self.visible_rows // 2
+        end_index = start_index + self.visible_rows
+
+        # Adjust start and end indices
+        if end_index > len(self.graphs[0].df):  # Assuming all graphs have the same length
+            end_index = len(self.graphs[0].df)
+            start_index = end_index - self.visible_rows
+        if start_index < 0:
+            start_index = 0
+            end_index = self.visible_rows
+
+        graph_df = pd.read_csv(self.graphs[0].df_path)  # Assuming all graphs share the same DateTime column
+        dates_times = graph_df["DateTime"].str.split(' ').tolist()[start_index:end_index]
+
+        self.current_values["DateTime"] = [dt[1] for dt in dates_times]  # Extracting the time part
+
+
+        self.column_widths = []  # List to store widths of each column
+
+        for graph in self.graphs:
+            high_val = graph.df[graph.column].max()
+            low_val = graph.df[graph.column].min()
+            avg_val = graph.df[graph.column].mean()
+
+            self.column_stats[graph.column] = (high_val, avg_val, low_val)
+            if graph.column not in self.current_values:
+                self.current_values[graph.column] = graph.df[graph.column].iloc[start_index:end_index].tolist()
+
+        for column in ["DateTime"] + [graph.column for graph in self.graphs]:  # Including the DateTime column
+            if column in self.current_values:
+                max_width = max([len(str(v)) for v in self.current_values[column]])
+                self.column_widths.append(max_width * 10)  # Multiplied by 10 as a rough estimate for pixel width
+
+        # Adjust the width of the table based on the total width of columns
+        self.width = sum(self.column_widths) + len(self.column_widths) * self.column_spacing - self.column_spacing
+        self.rect.width = self.width  # Adjust the width of the rectangle as well
+
+        self.highlighted_row = self.current_index - start_index
+
 
     def display(self, screen):
+        # Draw the white background
+        pygame.draw.rect(screen, WHITE, self.rect)
+
         if self.current_values:
-            for i, (key, (value, color)) in enumerate(self.current_values.items()):
-                column_name = key.split('_')[-1]  # Extract the column name from the unique key
-                text = self.font.render(f"{column_name}: {value}", True, color)
-                screen.blit(text, (self.x, self.y + i * 20))
+            # Display Column Names
+            x_offset = self.x
+            for idx, column in enumerate(["DateTime"] + [graph.column for graph in self.graphs]):
+                color = pygame.Color("black") if column == "DateTime" else self.graphs[idx - 1].color
+                if column == "DateTime":
+                    column = 'Time'
+                text = self.font.render(column, True, color)
+                screen.blit(text, (x_offset, self.y))
+                x_offset += self.column_widths[
+                                idx] + self.column_spacing  # Using the column width from the list and adding spacing
+
+            # Display Data Row-Wise
+            for row in range(self.visible_rows):
+                x_offset = self.x
+                for idx, column in enumerate(self.current_values):
+                    value = self.current_values[column][row]
+
+                    # Determine text color
+                    text_color = pygame.Color("red") if row == self.highlighted_row else pygame.Color("black")
+
+                    if column in self.column_stats:  # This checks if the column is not DateTime
+                        high_val, avg_val, low_val = self.column_stats[column]
+                        try:
+                            cell_bg_color = self.get_gradient_color(value, high_val, avg_val, low_val)
+                        except:
+                            # Should be fixed
+                            cell_bg_color = (100, 100, 100)
+                        cell_rect = pygame.Rect(x_offset, self.y + (row + 1) * self.row_height, self.column_widths[idx],
+                                                self.row_height)
+                        pygame.draw.rect(screen, cell_bg_color, cell_rect)
+
+                    text = self.font.render(f"{value}", True, text_color)  # Use text_color here
+                    screen.blit(text, (x_offset, self.y + (row + 1) * self.row_height))
+                    x_offset += self.column_widths[idx] + self.column_spacing
 
     def handle_events(self, event):
-        pass
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                self.dragging = True
+
+        elif event.type == pygame.MOUSEBUTTONUP:
+            self.dragging = False
+
+        elif event.type == pygame.MOUSEMOTION and self.dragging:
+            dx, dy = event.rel
+            self.update_position(dx, dy)
 
     def update(self, value):
-        # Set the values to display based on the slider's value.
-        self.set_values(int(value))
+        self.current_index = int(value)
+        self.set_values(self.current_index)
 
     def update_position(self, dx, dy):
         self.x += dx
