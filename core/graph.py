@@ -149,24 +149,30 @@ class Graph(UIElement, Observer, Observable):
 
         self.label_color = (192, 192, 192)
 
+        self.setup_grid(grid)
+
+
+    def setup_grid(self, grid):
         self.grid_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
 
         self.grid = grid
 
         if self.grid:
             self._draw_grid_on_surface()
+            self.create_toggle_buttons()
 
-        self.toggle_button_grid = TextButton(self.x + 75, self.y - 29, "Grid On", pygame.font.SysFont(None, 24),
-                                            (255, 255, 255), self.toggle_grid, alpha=100)
 
-        self.toggle_button_chart = TextButton(self.x + 150, self.y - 29, "Candle", pygame.font.SysFont(None, 24),
-                                            (255, 255, 255), self.toggle_bar, alpha=100)
+    def create_toggle_buttons(self):
+        """Create interactive toggle buttons for the graph."""
+        self.toggle_button_grid = self._create_button(self.x + 75, "Grid On", self.toggle_grid)
+        self.toggle_button_chart = self._create_button(self.x + 150, "Candle", self.toggle_bar)
+        self.toggle_button_strategy = self._create_button(self.x + 225, "Indicators On", self.toggle_strategy)
+        self.toggle_button_color = self._create_button(self.x + 350, "RG Color", self.toggle_color)
 
-        self.toggle_button_strategy = TextButton(self.x + 225, self.y - 29, "Indicators On", pygame.font.SysFont(None, 24),
-                                            (255, 255, 255), self.toggle_strategy, alpha=100)
 
-        self.toggle_button_color = TextButton(self.x + 350, self.y - 29, "RG Color", pygame.font.SysFont(None, 24),
-                                            (255, 255, 255), self.toggle_color, alpha=100)
+    def _create_button(self, x_pos, label, action):
+        """Helper function to create a button."""
+        return TextButton(x_pos, self.y - 29, label, pygame.font.SysFont(None, 24), (255, 255, 255), action, alpha=100)
 
     def _draw_grid_on_surface(self):
         """Draws the transparent grid onto self.grid_surface."""
@@ -279,6 +285,7 @@ class Graph(UIElement, Observer, Observable):
 
             max_val = displayed_data[self.column].max()
             min_val = displayed_data[self.column].min()
+            denominator = max_val - min_val
             if max_val == min_val:
                 values_normalized = [0.5 for _ in displayed_data[self.column]]  # Middle of the graph
             else:
@@ -291,40 +298,37 @@ class Graph(UIElement, Observer, Observable):
                 mid_val = (max_val + min_val) / 2
 
             if self.bar_chart:
-                # Resample the displayed data for 5-minute OHLC bars
-                ohlc_data = displayed_data.resample('5T').agg({
-                    self.column: ['first', 'max', 'min', 'last']
-                })
+                ohlc_data = displayed_data.resample('5T').agg({self.column: ['first', 'max', 'min', 'last']})
                 ohlc_data.columns = ['Open', 'High', 'Low', 'Close']
-                ohlc_data.dropna(inplace=True)  # drop any empty intervals
+                ohlc_data.dropna(inplace=True)
 
                 bar_width = max(1, self.width / len(ohlc_data) - 2)
+                width_ratio = self.width / (len(ohlc_data) - 1)
 
-                # Inside the loop where you're iterating over the OHLC data:
-                for idx, (timestamp, row) in enumerate(ohlc_data.iterrows()):
-                    x_pos = self.x + (self.width / (len(ohlc_data) - 1) * idx)
+                transparency = 128  # You can adjust this value. 0 is fully transparent, 255 is opaque.
 
-                    y_open = self.y + self.height - (self.height * (row['Open'] - min_val) / (max_val - min_val))
-                    y_high = self.y + self.height - (self.height * (row['High'] - min_val) / (max_val - min_val))
-                    y_low = self.y + self.height - (self.height * (row['Low'] - min_val) / (max_val - min_val))
-                    y_close = self.y + self.height - (self.height * (row['Close'] - min_val) / (max_val - min_val))
+                for idx, (_, row) in enumerate(ohlc_data.iterrows()):
+                    x_pos = self.x + width_ratio * idx
+                    y_values = [
+                        self.y + self.height - (self.height * (row[key] - min_val) / denominator)
+                        for key in ['Open', 'High', 'Low', 'Close']
+                    ]
 
-                    # Determine color
-                    if self.prof_coloring:
-                        current_color = (0, 255, 0) if row['Close'] >= row['Open'] else (255, 0, 0)
-                    else:
-                        current_color = self.color
+                    current_color = (0, 255, 0) if row['Close'] >= row['Open'] else (
+                        255, 0, 0) if self.prof_coloring else self.color
 
                     # Draw vertical line from Low to High
-                    pygame.draw.line(screen, current_color, (int(x_pos), int(y_low)), (int(x_pos), int(y_high)), 1)
+                    pygame.draw.line(screen, current_color, (int(x_pos), int(y_values[2])),
+                                     (int(x_pos), int(y_values[1])), 1)
 
-                    # Draw a rectangle for the Open and Close prices.
-                    if row['Close'] >= row['Open']:
-                        pygame.draw.rect(screen, current_color,
-                                         (int(x_pos - bar_width / 2), int(y_open), bar_width, int(y_close - y_open)))
-                    else:
-                        pygame.draw.rect(screen, current_color,
-                                         (int(x_pos - bar_width / 2), int(y_close), bar_width, int(y_open - y_close)))
+                    # Drawing a transparent rectangle for the Open and Close prices
+                    temp_surface = pygame.Surface((bar_width, abs(y_values[0] - y_values[3])))
+                    temp_surface.fill(current_color)
+                    temp_surface.set_alpha(transparency)
+
+                    # Adjust positioning based on the Open and Close values
+                    rect_y = min(y_values[0], y_values[3])
+                    screen.blit(temp_surface, (int(x_pos - bar_width / 2), int(rect_y)))
 
             # Define y positions for text
             y_pos_max = self.y + 5  # 5 pixels from the top edge of the graph
