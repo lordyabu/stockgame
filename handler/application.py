@@ -193,7 +193,10 @@ class Application:
         while running:
             for event in pygame.event.get():
                 for graph in self.graphs:
-                    graph.toggle_button.handle_event(event)
+                    graph.toggle_button_grid.handle_event(event)
+                    graph.toggle_button_chart.handle_event(event)
+                    graph.toggle_button_strategy.handle_event(event)
+                    graph.toggle_button_color.handle_event(event)
 
                 if event.type == pygame.QUIT:
                     running = False
@@ -222,7 +225,10 @@ class Application:
                 if isinstance(proj, Graph):
                     proj.display(self.screen, self.graphs)
                     # print('aaaaa')
-                    proj.toggle_button.display(self.screen)  # Display the button
+                    proj.toggle_button_grid.display(self.screen)  # Display the button
+                    proj.toggle_button_chart.display(self.screen)
+                    proj.toggle_button_strategy.display(self.screen)
+                    proj.toggle_button_color.display(self.screen)
 
                 elif not isinstance(proj, (Menu, MenuButton)):
                     proj.display(self.screen)

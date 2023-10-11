@@ -7,41 +7,44 @@ class Slider(UIElement, Observable):
         UIElement.__init__(self, x, y)  # Initialize UIElement with position (x and y)
         Observable.__init__(self)
 
-        # Set size directly in the Slider
         self.width = width
         self.height = 20  # Assuming this is the height of your slider.
+        self.radius = 15  # Radius of the slider handle
 
-        # Update the rect to account for the new width and height
-        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.rect = pygame.Rect(self.x, self.y - self.radius // 2, self.width, self.height + self.radius)
 
-
-        # Rest of the Slider's attributes initialization
         self.min_value = min_value
         self.max_value = max_value
         self.current_value = self.min_value
-        self.handle_width = self.width * 0.05
-        self.handle_color = (0, 128, 255)  # Blue
-        self.track_color = (200, 200, 200)  # Grey
 
-        # Additional attribute to check if the handle is being dragged
+        self.handle_color = (0, 0, 0)  # Black
+        self.track_color = (150, 150, 150)  # Grey
+
         self.dragging = False
         self.dragging_position = False
 
+        self.handle_width = self.radius * 2
+
+        self.font = pygame.font.SysFont('Arial', 16)  # Use Arial font with a size of 24 pixels.
+
     def display(self, screen):
-        # Draw the background of the slider
-        pygame.draw.rect(screen, self.track_color, self.rect)
+        # Draw the background of the slider as a thin line
+        pygame.draw.line(screen, self.track_color, (self.x, self.y), (self.x + self.width, self.y), 2)
 
         # Calculate the handle position based on the current_value
-        handle_x = self.x + (self.current_value - self.min_value) / (self.max_value - self.min_value) * (
-                self.width - self.handle_width)
+        proportion = (self.current_value - self.min_value) / (self.max_value - self.min_value)
+        handle_x = self.x + proportion * (self.width - self.handle_width) + self.radius
 
-        # Draw the handle
-        pygame.draw.rect(screen, self.handle_color, (handle_x, self.y, self.handle_width, self.height))
+        # Draw the handle as a circle
+        pygame.draw.circle(screen, self.handle_color, (int(handle_x), self.y), self.radius)
+
+        text = self.font.render('Time Slider', True, WHITE)
+        screen.blit(text, (self.x + self.width - text.get_width(), self.y - self.height - text.get_height()))
 
     def handle_events(self, event, is_locked=False):
-        handle_x = self.x + (self.current_value - self.min_value) / (self.max_value - self.min_value) * (
-                self.width - self.handle_width)
-        handle_rect = pygame.Rect(handle_x, self.y, self.handle_width, self.height)
+        proportion = (self.current_value - self.min_value) / (self.max_value - self.min_value)
+        handle_x = self.x + proportion * (self.width - self.handle_width) + self.radius
+        handle_rect = pygame.Rect(handle_x - self.radius, self.y - self.radius, self.handle_width, self.handle_width)
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1 and handle_rect.collidepoint(event.pos):  # Left click on handle
@@ -74,8 +77,15 @@ class Slider(UIElement, Observable):
         return self.rect.collidepoint(x, y)
 
     def update_value_from_pos(self, x):
-        relative_x = x - self.x
-        self.current_value = self.min_value + relative_x / (self.width - self.handle_width) * (self.max_value - self.min_value)
+        # Clamp the x-position within the bounds of the slider.
+        x = max(self.x + self.radius, min(self.x + self.width - self.radius, x))
+
+        # Calculate the relative position
+        relative_x = x - self.x - self.radius
+        proportion = relative_x / (self.width - self.handle_width)
+
+        # Update the current value
+        self.current_value = self.min_value + proportion * (self.max_value - self.min_value)
         self.current_value = max(self.min_value, min(self.max_value, self.current_value))
         self.notify_observers(self.current_value)
 

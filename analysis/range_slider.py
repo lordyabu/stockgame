@@ -20,7 +20,7 @@ class RangeSlider(UIElement, Observable):
         self.end_value = self.max_value
 
         self.handle_width = self.width * 0.05
-        self.handle_color = (0, 128, 255)  # Blue
+
         self.track_color = (200, 200, 200)  # Grey
 
         # Flags for dragging
@@ -29,35 +29,42 @@ class RangeSlider(UIElement, Observable):
 
         self.dragging_position = False
 
+        self.handle_color = (50, 50, 50)  # Grey for both start and end handles
+        self.radius = 15  # Radius for the circle handles
+
+
+
     def display(self, screen):
-        # Draw the background of the slider
-        pygame.draw.rect(screen, self.track_color, self.rect)
+        # Draw the background of the slider as a thin line
+        pygame.draw.line(screen, self.track_color, (self.x, self.y), (self.x + self.width, self.y), 2)
 
         # Calculate handle positions
-        start_handle_x = self.rect.x + (self.start_value - self.min_value) / (self.max_value - self.min_value) * (
-                self.width - self.handle_width)
-        end_handle_x = self.rect.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * (
-                self.width - self.handle_width)
+        start_handle_x = self.rect.x + (self.start_value - self.min_value) / (self.max_value - self.min_value) * self.width
+        end_handle_x = self.rect.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * self.width
 
-        # Draw the handles
-        pygame.draw.rect(screen, self.handle_color, (start_handle_x, self.y, self.handle_width, self.height))
-        pygame.draw.rect(screen, self.handle_color, (end_handle_x, self.y, self.handle_width, self.height))
+        pygame.draw.circle(screen, self.handle_color, (int(start_handle_x), self.y), self.radius)
+        pygame.draw.circle(screen, self.handle_color, (int(end_handle_x), self.y), self.radius)
+
+        font = pygame.font.SysFont('Arial', 16)
+        text = font.render('Interval Slider', True, WHITE)
+        screen.blit(text, (self.x + self.width - text.get_width(), self.y - self.radius * 2 - text.get_height()))
 
     def handle_events(self, event, is_locked=False):
-        start_handle_x = self.rect.x + (self.start_value - self.min_value) / (self.max_value - self.min_value) * (
-                self.width - self.handle_width)
-        end_handle_x = self.rect.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * (
-                self.width - self.handle_width)
-
-        start_handle_rect = pygame.Rect(start_handle_x, self.y, self.handle_width, self.height)
-        end_handle_rect = pygame.Rect(end_handle_x, self.y, self.handle_width, self.height)
+        start_handle_x = self.rect.x + (self.start_value - self.min_value) / (
+                    self.max_value - self.min_value) * self.width
+        end_handle_x = self.rect.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * self.width
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            # Left-click to move the handles
-            if start_handle_rect.collidepoint(event.pos) and event.button == 1:
+            clicked_x, clicked_y = event.pos
+
+            # Check if the start handle was clicked
+            if event.button == 1 and (start_handle_x - clicked_x) ** 2 + (self.y - clicked_y) ** 2 <= self.radius ** 2:
                 self.dragging_start = True
-            elif end_handle_rect.collidepoint(event.pos) and event.button == 1:
+
+            # Check if the end handle was clicked
+            elif event.button == 1 and (end_handle_x - clicked_x) ** 2 + (self.y - clicked_y) ** 2 <= self.radius ** 2:
                 self.dragging_end = True
+
             # Right-click to move the entire slider
             elif self.rect.collidepoint(event.pos) and event.button == 3:
                 if is_locked:

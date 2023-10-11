@@ -23,16 +23,16 @@ class Strategy:
         label = None
 
         if signal_string == 'buy':
-            color = (0, 255, 0)  # Green for buy
+            color = (0, 255, 50)  # Green for buy
             label = "Buy"
         elif signal_string == 'end_buy':
-            color = (0, 255, 0)  # Yellow for end_buy
+            color = (0, 255, 50)  # Yellow for end_buy
             label = "End Buy"
         elif signal_string == 'short':
-            color = (255, 0, 0)  # Red for sell
-            label = "Sell"
+            color = (255, 50, 0)  # Red for sell
+            label = "Short"
         elif signal_string == 'end_short':
-            color = (255, 0, 0)  # White for end_short
+            color = (255, 50, 0)  # White for end_short
             label = "End Short"
 
         return color, label

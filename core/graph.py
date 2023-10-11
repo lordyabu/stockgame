@@ -127,13 +127,12 @@ class Graph(UIElement, Observer, Observable):
 
 
 
-        self.bar_chart = False
 
         self.colors = self.calculate_colors()
 
         self.bar_chart = bar_chart
 
-        self.df['DateTime'] = pd.to_datetime(self.df['DateTime'], format='%d/%m/%Y %H:%M')
+        self.df['DateTime'] = pd.to_datetime(self.df['DateTime'], format='%m/%d/%Y %H:%M')
 
 
 
@@ -157,9 +156,17 @@ class Graph(UIElement, Observer, Observable):
         if self.grid:
             self._draw_grid_on_surface()
 
-        print("SETTING GRID BUTTON")
-        self.toggle_button = TextButton(self.x, self.y - 60, "Grid On", pygame.font.SysFont(None, 24),
-                                            (255, 255, 255), self.toggle_grid)
+        self.toggle_button_grid = TextButton(self.x + 75, self.y - 29, "Grid On", pygame.font.SysFont(None, 24),
+                                            (255, 255, 255), self.toggle_grid, alpha=100)
+
+        self.toggle_button_chart = TextButton(self.x + 150, self.y - 29, "Candle", pygame.font.SysFont(None, 24),
+                                            (255, 255, 255), self.toggle_bar, alpha=100)
+
+        self.toggle_button_strategy = TextButton(self.x + 225, self.y - 29, "Indicators On", pygame.font.SysFont(None, 24),
+                                            (255, 255, 255), self.toggle_strategy, alpha=100)
+
+        self.toggle_button_color = TextButton(self.x + 350, self.y - 29, "RG Color", pygame.font.SysFont(None, 24),
+                                            (255, 255, 255), self.toggle_color, alpha=100)
 
     def _draw_grid_on_surface(self):
         """Draws the transparent grid onto self.grid_surface."""
@@ -183,11 +190,38 @@ class Graph(UIElement, Observer, Observable):
     def toggle_grid(self):
         self.grid = not self.grid
         if self.grid:
-            self.toggle_button.text = "Grid Off"
+            self.toggle_button_grid.text = "Grid On"
         else:
-            self.toggle_button.text = "Grid On"
-        self.toggle_button.image = self.toggle_button.font.render(self.toggle_button.text, True,
-                                                                  self.toggle_button.color)
+            self.toggle_button_grid.text = "Grid Off"
+        self.toggle_button_grid.image = self.toggle_button_grid.font.render(self.toggle_button_grid.text, True,
+                                                                  self.toggle_button_grid.color)
+
+    def toggle_bar(self):
+        self.bar_chart = not self.bar_chart
+        if self.bar_chart:
+            self.toggle_button_chart.text = "Candle"
+        else:
+            self.toggle_button_chart.text = "Line"
+        self.toggle_button_chart.image = self.toggle_button_chart.font.render(self.toggle_button_chart.text, True,
+                                                                  self.toggle_button_chart.color)
+
+    def toggle_strategy(self):
+        self.strategy_active = not self.strategy_active
+        if self.strategy_active:
+            self.toggle_button_strategy.text = "Indicator On"
+        else:
+            self.toggle_button_strategy.text = "Indicator Off"
+        self.toggle_button_strategy.image = self.toggle_button_strategy.font.render(self.toggle_button_strategy.text, True,
+                                                                  self.toggle_button_strategy.color)
+
+    def toggle_color(self):
+        self.prof_coloring = not self.prof_coloring
+        if self.prof_coloring:
+            self.toggle_button_color.text = "RG Color"
+        else:
+            self.toggle_button_color.text = "B Color"
+        self.toggle_button_color.image = self.toggle_button_color.font.render(self.toggle_button_color.text, True,
+                                                                  self.toggle_button_color.color)
 
     def calculate_colors(self):
         """Calculate colors for data points based on the previous average."""
@@ -276,7 +310,10 @@ class Graph(UIElement, Observer, Observable):
                     y_close = self.y + self.height - (self.height * (row['Close'] - min_val) / (max_val - min_val))
 
                     # Determine color
-                    current_color = (0, 255, 0) if row['Close'] >= row['Open'] else (255, 0, 0)
+                    if self.prof_coloring:
+                        current_color = (0, 255, 0) if row['Close'] >= row['Open'] else (255, 0, 0)
+                    else:
+                        current_color = self.color
 
                     # Draw vertical line from Low to High
                     pygame.draw.line(screen, current_color, (int(x_pos), int(y_low)), (int(x_pos), int(y_high)), 1)
@@ -345,7 +382,14 @@ class Graph(UIElement, Observer, Observable):
                             else:
                                 current_color = (255, 0, 0)  # red for down
                         else:
-                            current_color = self.color
+                            if idx > 0:
+                                if displayed_data[self.column].iloc[idx] > displayed_data[self.column].iloc[
+                                    idx - 1]:
+                                    current_color = (0, 255, 0)  # green for up
+                                else:
+                                    current_color = (255, 0, 0)  # red for down
+                            else:
+                                current_color = (0, 255, 0)
                     else:
                         current_color = self.color
 
@@ -412,9 +456,6 @@ class Graph(UIElement, Observer, Observable):
         if self.grid:
             screen.blit(self.grid_surface, (self.x, self.y))
 
-    def toggle_strategy(self):
-        if self.strategy:
-            self.strategy.toggle_active()
 
     def compute_moving_average(self, window_size=3):
         if self.df is not None:
@@ -422,10 +463,7 @@ class Graph(UIElement, Observer, Observable):
         return None
 
     def set_data_file(self, day):
-        # print("SSSSSS")
-        # print(id(self), 'SETTING')
         if not self.data_filename:  # If filename not set, don't continue
-            # print("CASFCSACASCASFGVGSAGASGSAGASG")
             return
 
         try:
@@ -440,6 +478,14 @@ class Graph(UIElement, Observer, Observable):
                 self.df = new_df
                 # print(f"Loaded data for Day{day}. First few rows:")
                 # print(self.df.head())  # Printing the first few rows of the new data
+                self.df['DateTime'] = pd.to_datetime(self.df['DateTime'], format='%m/%d/%Y %H:%M')
+                self.df.set_index('DateTime', inplace=True)
+                self.ohlc_data = self.df.resample('5T').agg({
+                    'Price': ['first', 'max', 'min', 'last']
+                })
+
+                self.ohlc_data.columns = ['Open', 'High', 'Low', 'Close']
+                self.ohlc_data.dropna(inplace=True)  # drop any empty intervals
             else:
                 print(f"Warning: Data file {new_path} is empty.")
         except FileNotFoundError:
@@ -457,7 +503,10 @@ class Graph(UIElement, Observer, Observable):
         self.y += dy
         self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
         # print('Scoob')
-        self.toggle_button.update_position(dx, dy)
+        self.toggle_button_grid.update_position(dx, dy)
+        self.toggle_button_chart.update_position(dx, dy)
+        self.toggle_button_color.update_position(dx, dy)
+        self.toggle_button_strategy.update_position(dx, dy)
 
 
     def update(self, value):
