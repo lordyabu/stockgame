@@ -6,6 +6,7 @@ from core.clock import Clock
 from utils.observer_pattern import Observer, Observable
 from utils.uiux import UIElement
 from analysis.slider import Slider
+from utils.mini_button import TextButton
 from analysis.table import DataTable
 import os
 # Colors
@@ -46,7 +47,7 @@ class Graph(UIElement, Observer, Observable):
     def __init__(self, is_live=False, data_file=None, column='Price',
                  size_multiplier=1.0, y_offset_percentage=0.6,
                  x=None, y=None, width=None, height=None, color=(0, 0, 255),
-                 title='', original_title='', strategy_active=False, strategy_name='Strategy'):
+                 title='', original_title='', strategy_active=False, strategy_name='Strategy', prof_coloring=False, bar_chart=False, grid=True):
         """
         Initialize a Graph instance.
 
@@ -122,6 +123,89 @@ class Graph(UIElement, Observer, Observable):
 
         self.display_range = (0, len(self.df) - 1) if self.df is not None else (0, 0)
 
+        self.prof_coloring = prof_coloring
+
+
+
+        self.bar_chart = False
+
+        self.colors = self.calculate_colors()
+
+        self.bar_chart = bar_chart
+
+        self.df['DateTime'] = pd.to_datetime(self.df['DateTime'], format='%d/%m/%Y %H:%M')
+
+
+
+        # Assuming 'DateTime' column is of type datetime64
+        self.df.set_index('DateTime', inplace=True)
+
+        # Resample in 5-minute intervals and compute OHLC
+        self.ohlc_data = self.df.resample('5T').agg({
+            'Price': ['first', 'max', 'min', 'last']
+        })
+
+        self.ohlc_data.columns = ['Open', 'High', 'Low', 'Close']
+        self.ohlc_data.dropna(inplace=True)  # drop any empty intervals
+
+        self.label_color = (192, 192, 192)
+
+        self.grid_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+
+        self.grid = grid
+
+        if self.grid:
+            self._draw_grid_on_surface()
+
+        print("SETTING GRID BUTTON")
+        self.toggle_button = TextButton(self.x, self.y - 60, "Grid On", pygame.font.SysFont(None, 24),
+                                            (255, 255, 255), self.toggle_grid)
+
+    def _draw_grid_on_surface(self):
+        """Draws the transparent grid onto self.grid_surface."""
+        alpha_value = 64  # Adjust this value for desired transparency; lower value means more transparent
+
+        interval_step = max(len(self.df) // 7, 1)  # Ensure it's at least 1
+
+        # Vertical lines
+        for idx in range(0, len(self.df), interval_step):
+            x_pos = (self.width / (len(self.df) - 1) * idx)
+            pygame.draw.line(self.grid_surface, self.label_color + (alpha_value,), (int(x_pos), 0),
+                             (int(x_pos), self.height), 1)
+
+        # Horizontal lines
+        y_spacing = self.height / 4
+        for i in range(5):  # Five lines in total
+            y_pos = i * y_spacing
+            pygame.draw.line(self.grid_surface, self.label_color + (alpha_value,), (0, int(y_pos)),
+                             (self.width, int(y_pos)), 1)
+
+    def toggle_grid(self):
+        self.grid = not self.grid
+        if self.grid:
+            self.toggle_button.text = "Grid Off"
+        else:
+            self.toggle_button.text = "Grid On"
+        self.toggle_button.image = self.toggle_button.font.render(self.toggle_button.text, True,
+                                                                  self.toggle_button.color)
+
+    def calculate_colors(self):
+        """Calculate colors for data points based on the previous average."""
+        if self.df is None or 'Price' not in self.df:
+            return []
+
+        prices = self.df['Price'].tolist()
+        colors = []
+
+        # Compute the lookback for coloring
+        cum_sum = 0
+        for i, price in enumerate(prices):
+            cum_avg = cum_sum / (i+1) if i != 0 else price
+            color = (0, 255, 0) if price >= cum_avg else (255, 0, 0)
+            colors.append(color)
+            cum_sum += price
+        return colors
+
     def set_highlight_index(self, index):
         """
         Set the index to be highlighted.
@@ -137,6 +221,14 @@ class Graph(UIElement, Observer, Observable):
         return overlapping_graphs
 
     def display(self, screen, all_graphs=[]):
+        def render_transparent_text(surface, text, font, color, position, alpha):
+            text_surf = font.render(text, True, color).convert_alpha()
+            text_surf.fill((255, 255, 255, alpha), None, pygame.BLEND_RGBA_MULT)
+            surface.blit(text_surf, position)
+
+
+
+        alpha_value = 128
         # print(self.highlight_index)
 
         # print(self.display_range)
@@ -164,19 +256,51 @@ class Graph(UIElement, Observer, Observable):
             else:
                 mid_val = (max_val + min_val) / 2
 
+            if self.bar_chart:
+                # Resample the displayed data for 5-minute OHLC bars
+                ohlc_data = displayed_data.resample('5T').agg({
+                    self.column: ['first', 'max', 'min', 'last']
+                })
+                ohlc_data.columns = ['Open', 'High', 'Low', 'Close']
+                ohlc_data.dropna(inplace=True)  # drop any empty intervals
+
+                bar_width = max(1, self.width / len(ohlc_data) - 2)
+
+                # Inside the loop where you're iterating over the OHLC data:
+                for idx, (timestamp, row) in enumerate(ohlc_data.iterrows()):
+                    x_pos = self.x + (self.width / (len(ohlc_data) - 1) * idx)
+
+                    y_open = self.y + self.height - (self.height * (row['Open'] - min_val) / (max_val - min_val))
+                    y_high = self.y + self.height - (self.height * (row['High'] - min_val) / (max_val - min_val))
+                    y_low = self.y + self.height - (self.height * (row['Low'] - min_val) / (max_val - min_val))
+                    y_close = self.y + self.height - (self.height * (row['Close'] - min_val) / (max_val - min_val))
+
+                    # Determine color
+                    current_color = (0, 255, 0) if row['Close'] >= row['Open'] else (255, 0, 0)
+
+                    # Draw vertical line from Low to High
+                    pygame.draw.line(screen, current_color, (int(x_pos), int(y_low)), (int(x_pos), int(y_high)), 1)
+
+                    # Draw a rectangle for the Open and Close prices.
+                    if row['Close'] >= row['Open']:
+                        pygame.draw.rect(screen, current_color,
+                                         (int(x_pos - bar_width / 2), int(y_open), bar_width, int(y_close - y_open)))
+                    else:
+                        pygame.draw.rect(screen, current_color,
+                                         (int(x_pos - bar_width / 2), int(y_close), bar_width, int(y_open - y_close)))
+
             # Define y positions for text
             y_pos_max = self.y + 5  # 5 pixels from the top edge of the graph
             y_pos_mid = self.y + self.height / 2 - 12  # centered in the middle, adjusted for text height
             y_pos_min = self.y + self.height - 25  # 25 pixels from the bottom edge to account for text height
 
             # Render the text
-            text_max = font.render(f"{max_val:.2f}", True, self.color)
-            text_mid = font.render(f"{mid_val:.2f}", True, self.color)
-            text_min = font.render(f"{min_val:.2f}", True, self.color)
+            text_max = font.render(f"{max_val:.2f}", True, self.label_color)
+            text_mid = font.render(f"{mid_val:.2f}", True, self.label_color)
+            text_min = font.render(f"{min_val:.2f}", True, self.label_color)
 
-            # Determine the x position (inside the graph aligned to the right)
-            x_pos_text = self.x + self.width - 10 - max(text_max.get_width(), text_mid.get_width(),
-                                                        text_min.get_width())
+            padding = 10  # distance from the right edge of the graph
+            x_pos_text = self.x + self.width + padding
 
             # Blit the text
             screen.blit(text_max, (x_pos_text, y_pos_max))
@@ -184,7 +308,7 @@ class Graph(UIElement, Observer, Observable):
             screen.blit(text_min, (x_pos_text, y_pos_min))
 
             # Extract time values from the DateTime column
-            time_values = displayed_data['DateTime'].str.split(' ').str[1].tolist()
+            time_values = displayed_data.index.strftime('%H:%M').tolist()
 
             # Determine the number of time labels to display based on size_multiplier
             num_intervals = int(self.size_multiplier * 7)  # Multiplying by 7 as a baseline number of intervals
@@ -195,24 +319,42 @@ class Graph(UIElement, Observer, Observable):
             # Displaying time values on the X-axis at the determined intervals
             for idx in range(0, len(time_values), interval_step):
                 x_pos = self.x + (self.width / (len(displayed_data) - 1) * idx)
-                time_text = font.render(time_values[idx], True, self.color)
-                screen.blit(time_text, (x_pos - time_text.get_width() / 2, self.y + self.height + 5))
+                time_text = font.render(time_values[idx], True, self.label_color)
+                render_transparent_text(screen, time_values[idx], font, self.label_color,
+                                        (x_pos - time_text.get_width() / 2, self.y + self.height + 5), alpha_value)
 
             prev_x_pos = None
             prev_y_pos = None
-            for idx, value in enumerate(values_normalized):
-                relative_idx = idx
+            if not self.bar_chart:
+                for idx, value in enumerate(values_normalized):
+                    relative_idx = idx
 
-                x_pos = self.x + (self.width / (len(displayed_data) - 1) * relative_idx) if len(
-                    displayed_data) > 1 else self.x
+                    x_pos = self.x + (self.width / (len(displayed_data) - 1) * relative_idx) if len(
+                        displayed_data) > 1 else self.x
 
-                y_pos = self.y + self.height - (self.height * value)
-                # (x_pos, y_pos, prev_x_pos, prev_y_pos)
-                if prev_x_pos is not None:
-                    pygame.draw.line(screen, self.color, (int(prev_x_pos), int(prev_y_pos)), (int(x_pos), int(y_pos)),
-                                     2)
-                prev_x_pos = x_pos
-                prev_y_pos = y_pos
+                    y_pos = self.y + self.height - (self.height * value)
+                    current_color = self.color  # default color
+
+                    # If profit_coloring is active, decide the color based on value change
+                    if self.prof_coloring:
+                        lookback_period = 5  # or whatever value you deem appropriate
+                        if idx >= lookback_period:
+                            if displayed_data[self.column].iloc[idx] > displayed_data[self.column].iloc[
+                                idx - lookback_period]:
+                                current_color = (0, 255, 0)  # green for up
+                            else:
+                                current_color = (255, 0, 0)  # red for down
+                        else:
+                            current_color = self.color
+                    else:
+                        current_color = self.color
+
+                    if prev_x_pos is not None:
+                        pygame.draw.line(screen, current_color, (int(prev_x_pos), int(prev_y_pos)),
+                                         (int(x_pos), int(y_pos)), 2)
+
+                    prev_x_pos = x_pos
+                    prev_y_pos = y_pos
 
             # Display a point for the highlighted index
             if self.highlight_index is not None and 0 <= self.highlight_index < len(self.df):
@@ -236,19 +378,48 @@ class Graph(UIElement, Observer, Observable):
         if self.strategy and self.strategy_active and self.strategy_name in self.df.columns:
             for idx, (value, signal) in enumerate(zip(values_normalized, displayed_data[self.strategy_name])):
                 x_pos = self.x + (self.width / (len(displayed_data) - 1) * idx) if len(displayed_data) > 1 else self.x
-
                 y_pos = self.y + self.height - (self.height * value)
 
                 color, label = strategy.get_signal_display_info(signal)
 
                 if color is not None:
                     pygame.draw.circle(screen, color, (int(x_pos), int(y_pos)), self.point_radius)
-                    screen.blit(pygame.font.SysFont(None, 24).render(label, True, color),
-                                (int(x_pos), int(y_pos) - 20))
+
+                if label:
+                    label_surface = pygame.font.SysFont(None, 24).render(label, True, color)
+                    label_width = label_surface.get_width()
+                    label_height = label_surface.get_height()
+
+                    # Check space above and below the point
+                    space_above = y_pos - self.y
+                    space_below = (self.y + self.height) - y_pos
+
+                    # Prefer vertical positioning with added logic for up vs down
+                    if space_above > label_height and (
+                            self.height / 2) > y_pos:  # if point is in the upper half of the graph
+                        text_pos = (int(x_pos - label_width / 2), int(y_pos) - 20 - label_height)
+                    elif space_below > label_height and (
+                            self.height / 2) <= y_pos:  # if point is in the lower half of the graph
+                        text_pos = (int(x_pos - label_width / 2), int(y_pos) + 20)
+                    else:  # Adjust based on space available
+                        if space_above > space_below:
+                            text_pos = (int(x_pos - label_width / 2), int(y_pos) - 20 - label_height)
+                        else:
+                            text_pos = (int(x_pos - label_width / 2), int(y_pos) + 20)
+
+                    screen.blit(label_surface, text_pos)
+
+        if self.grid:
+            screen.blit(self.grid_surface, (self.x, self.y))
 
     def toggle_strategy(self):
         if self.strategy:
             self.strategy.toggle_active()
+
+    def compute_moving_average(self, window_size=3):
+        if self.df is not None:
+            return self.df[self.column].rolling(window=window_size).mean()
+        return None
 
     def set_data_file(self, day):
         # print("SSSSSS")
@@ -285,6 +456,9 @@ class Graph(UIElement, Observer, Observable):
         self.x += dx
         self.y += dy
         self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
+        # print('Scoob')
+        self.toggle_button.update_position(dx, dy)
+
 
     def update(self, value):
         """Called when the slider's value changes."""
@@ -338,7 +512,10 @@ class Graph(UIElement, Observer, Observable):
             'original_title': self.original_title,
             'data_filename': self.data_filename,
             'strategy_name': self.strategy_name,
-            'strategy_active': self.strategy_active
+            'strategy_active': self.strategy_active,
+            'is_grid': self.grid,
+            'is_bar': self.bar_chart,
+            'is_prof': self.prof_coloring
         })
         return data
 
@@ -369,7 +546,10 @@ class Graph(UIElement, Observer, Observable):
             color=data['color'],
             original_title=data['original_title'],
             strategy_active=data['strategy_active'],
-            strategy_name=data['strategy_name']
+            strategy_name=data['strategy_name'],
+            grid=data['is_grid'],
+            prof_coloring=data['is_prof'],
+            bar_chart=data['is_bar']
         )
 
 

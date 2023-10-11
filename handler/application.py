@@ -10,6 +10,7 @@ from analysis.table import DataTable
 from core.dayswitch import DaySwitch
 from analysis.range_slider import RangeSlider
 
+
 class Application:
 
     def __init__(self):
@@ -19,6 +20,8 @@ class Application:
         pygame.display.set_caption("Resizable Window with Clock and Graphs")
         self.GLOBAL_LOCK = False
         self.initialize_projections('strategy_zero')
+
+        self.background_color = (10, 25, 50)
 
 
         self.dragging = False
@@ -60,19 +63,21 @@ class Application:
         if loaded_day_switch:
             loaded_day_switch.graphs = loaded_graphs
             self.day_switch = loaded_day_switch
+
+        self.graphs = loaded_graphs
     def initialize_projections(self, strategy_dir):
         object_configs = [
             {"class": Clock, "args": (10, 10, 100, 50),
              "kwargs": {"text_color": "black", "border_color": "black", "bg_color": "darkGray"}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price1',
-                        "size_multiplier": 1.5, "color": (255, 0, 0), "title": "Graph 1", "original_title": "Graph 1", "strategy_active": True}},
+                        "size_multiplier": 1.5, "color": (255, 0, 0), "title": "Graph 1", "original_title": "Graph 1", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price2',
-                        "size_multiplier": .9, "color": (0, 255, 0), "title": "Graph 2", "original_title": "Graph 2", "strategy_active": True}},
+                        "size_multiplier": .9, "color": (0, 255, 0), "title": "Graph 2", "original_title": "Graph 2", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price3',
-                        "size_multiplier": .9, "color": (0, 0, 255), "title": "Graph 3", "original_title": "Graph 3", "strategy_active": True}}
+                        "size_multiplier": .9, "color": (0, 0, 255), "title": "Graph 3", "original_title": "Graph 3", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True}}
         ]
 
         self.projections = [config["class"](*config.get("args", ()), **config["kwargs"]) for config in object_configs]
@@ -99,7 +104,6 @@ class Application:
         self.range_slider = RangeSlider(50, 500, 700, 0, max_length - 1)  # Assuming a suitable position and width
         self.projections.append(self.range_slider)
 
-        self.background_color = (50, 50, 75)
 
         for graph in self.graphs:
             graph.add_observer(self.slider)
@@ -188,6 +192,9 @@ class Application:
         self.dragged_object = None
         while running:
             for event in pygame.event.get():
+                for graph in self.graphs:
+                    graph.toggle_button.handle_event(event)
+
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.VIDEORESIZE:
@@ -214,6 +221,9 @@ class Application:
 
                 if isinstance(proj, Graph):
                     proj.display(self.screen, self.graphs)
+                    # print('aaaaa')
+                    proj.toggle_button.display(self.screen)  # Display the button
+
                 elif not isinstance(proj, (Menu, MenuButton)):
                     proj.display(self.screen)
 
