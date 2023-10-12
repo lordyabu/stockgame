@@ -2,11 +2,47 @@ import pygame
 from core.graph import Graph
 from analysis.slider import Slider
 from analysis.table import DataTable
-from utils.observer_pattern import Observable
+from utils.observering import Observable
 from utils.uiux import UIElement
 
 class RangeSlider(UIElement, Observable):
+    """
+    A slider allowing selection of a range of values.
+
+    Methods
+    -------
+    display(screen)
+        Render the slider on the given screen.
+    handle_events(event, is_locked=False)
+        Handle mouse events for interactions with the slider.
+    update_position(dx, dy)
+        Update the slider's position based on x and y deltas.
+    update_value_from_pos(x, handle_type)
+        Update the slider values based on the given x-coordinate and handle type.
+    update_slider_positions()
+        Adjust the slider positions if they are too close or overlapping.
+    serialize()
+        Convert the slider's state to a dictionary.
+    deserialize(data)
+        Create a RangeSlider instance from a dictionary.
+    """
     def __init__(self, x, y, width, min_value, max_value):
+        """
+        Initialize a RangeSlider instance.
+
+        Parameters
+        ----------
+        x : int
+            x-coordinate of the top-left corner of the slider.
+        y : int
+            y-coordinate of the top-left corner of the slider.
+        width : int
+            Width of the slider.
+        min_value : int, float
+            Minimum value of the slider range.
+        max_value : int, float
+            Maximum value of the slider range.
+        """
         super().__init__(x, y)
         Observable.__init__(self)
 
@@ -35,6 +71,14 @@ class RangeSlider(UIElement, Observable):
         self.font = pygame.font.SysFont('Arial', 16)
 
     def display(self, screen):
+        """
+        Render the slider on the given screen.
+
+        Parameters
+        ----------
+        screen : pygame.Surface
+            The Pygame screen to render the slider on.
+        """
         start_handle_x = self.rect.x + (self.start_value - self.min_value) / (
                     self.max_value - self.min_value) * self.width
         end_handle_x = self.rect.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * self.width
@@ -68,6 +112,16 @@ class RangeSlider(UIElement, Observable):
                     (self.x + self.width - text.get_width(), self.y - self.radius * 2 - text.get_height()))
 
     def handle_events(self, event, is_locked=False):
+        """
+        Handle mouse events for interactions with the slider.
+
+        Parameters
+        ----------
+        event : pygame.Event
+            The Pygame event to be handled.
+        is_locked : bool, optional
+            If True, disables dragging the entire slider's position, default is False.
+        """
         start_handle_x = self.rect.x + (self.start_value - self.min_value) / (
                     self.max_value - self.min_value) * self.width
         end_handle_x = self.rect.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * self.width
@@ -118,13 +172,32 @@ class RangeSlider(UIElement, Observable):
             self.update_slider_positions()
 
     def update_position(self, dx, dy):
-        """Update the position of the slider."""
+        """
+        Update the slider's position based on x and y deltas.
+
+        Parameters
+        ----------
+        dx : int
+            Change in the x-coordinate.
+        dy : int
+            Change in the y-coordinate.
+        """
         self.x += dx
         self.y += dy
         self.rect.topleft = (self.x, self.y)
         self.notify_observers((self.start_value, self.end_value))
 
     def update_value_from_pos(self, x, handle_type):
+        """
+        Update the slider values based on the given x-coordinate and handle type.
+
+        Parameters
+        ----------
+        x : int
+            x-coordinate where the change happened.
+        handle_type : str
+            Type of handle being moved ("start" or "end").
+        """
         relative_x = x - self.rect.x
         value = int(self.min_value + relative_x / (self.width - self.handle_width) * (self.max_value - self.min_value))
         value = max(self.min_value, min(self.max_value, value))
@@ -139,6 +212,9 @@ class RangeSlider(UIElement, Observable):
         self.notify_observers((self.start_value, self.end_value))
 
     def update_slider_positions(self):
+        """
+        Adjust the slider positions if they are too close or overlapping.
+        """
         MIN_GAP = 1  # Ensure at least one data point between the two sliders
 
         if self.end_value - self.start_value < MIN_GAP:
@@ -149,6 +225,14 @@ class RangeSlider(UIElement, Observable):
 
 
     def serialize(self):
+        """
+        Convert the slider's state to a dictionary.
+
+        Returns
+        -------
+        dict
+            Dictionary representation of the slider's state.
+        """
         data = super().serialize()  # Get base class serialization data.
         data.update({
             "type": "RangeSlider",
@@ -162,6 +246,19 @@ class RangeSlider(UIElement, Observable):
 
     @staticmethod
     def deserialize(data):
+        """
+        Create a RangeSlider instance from a dictionary.
+
+        Parameters
+        ----------
+        data : dict
+            Dictionary containing slider data.
+
+        Returns
+        -------
+        RangeSlider
+            A new RangeSlider instance.
+        """
         width = data.get("width", 700)  # Default to 700 if width is not present.
         range_slider = RangeSlider(data["x"], data["y"], width, data["min_value"], data["max_value"])
         range_slider.start_value = data.get("start_value", data["min_value"])  # Default to min_value if start_value is not present.
@@ -169,13 +266,13 @@ class RangeSlider(UIElement, Observable):
         return range_slider
 
 
-# Colors
-WHITE = (255, 255, 255)
-
-# Screen dimensions
-WIDTH, HEIGHT = 800, 600
 
 if __name__ == "__main__":
+    # Colors
+    WHITE = (255, 255, 255)
+
+    # Screen dimensions
+    WIDTH, HEIGHT = 800, 600
     pygame.init()
     pygame.font.init()
 

@@ -1,9 +1,48 @@
 import pygame
-from utils.observer_pattern import Observable
+from utils.observering import Observable
 from utils.uiux import UIElement
 class Slider(UIElement, Observable):
+    """
+    A class used to represent an interactive slider UI element.
+
+    Methods
+    -------
+    display(screen)
+        Displays the slider on the given Pygame screen.
+    handle_events(event, is_locked=False)
+        Handles Pygame events like mouse clicks and movements.
+    update_position(dx, dy)
+        Updates the position of the slider.
+    is_clicked(x, y)
+        Returns True if the given x, y coordinates intersect the slider.
+    update_value_from_pos(x)
+        Updates the current value based on the handle's x-coordinate.
+    update(value)
+        Updates the slider based on the provided value or range.
+    serialize()
+        Returns a dictionary containing slider's data.
+    deserialize(data)
+        Returns a new Slider instance from the provided serialized data.
+    """
+
 
     def __init__(self, x, y, width, min_value, max_value):
+        """
+        Constructs all the necessary attributes for the Slider object.
+
+        Parameters
+        ----------
+        x : int
+            The x-coordinate of the slider.
+        y : int
+            The y-coordinate of the slider.
+        width : int
+            The width of the slider.
+        min_value : int or float
+            The minimum value of the slider.
+        max_value : int or float
+            The maximum value of the slider.
+        """
         UIElement.__init__(self, x, y)  # Initialize UIElement with position (x and y)
         Observable.__init__(self)
 
@@ -28,6 +67,14 @@ class Slider(UIElement, Observable):
         self.font = pygame.font.SysFont('Arial', 16)  # Use Arial font with a size of 24 pixels.
 
     def display(self, screen):
+        """
+        Displays the slider on the given Pygame screen.
+
+        Parameters
+        ----------
+        screen : pygame.Surface
+            The Pygame screen where the slider should be displayed.
+        """
         # Calculate the handle position based on the current_value
         proportion = (self.current_value - self.min_value) / (self.max_value - self.min_value)
         handle_x = self.x + proportion * (self.width - self.handle_width) + self.radius
@@ -59,6 +106,16 @@ class Slider(UIElement, Observable):
                                    self.y - self.radius * 2 - text.get_height()))
 
     def handle_events(self, event, is_locked=False):
+        """
+        Handle mouse events for the slider, such as dragging the handle or the entire slider.
+
+        Parameters
+        ----------
+        event : pygame.Event
+            The Pygame event to be handled.
+        is_locked : bool, optional
+            If True, disables dragging the entire slider's position, default is False.
+        """
         proportion = (self.current_value - self.min_value) / (self.max_value - self.min_value)
         handle_x = self.x + proportion * (self.width - self.handle_width) + self.radius
         padding = 10
@@ -90,16 +147,48 @@ class Slider(UIElement, Observable):
                 self.update_position(*event.rel)
 
     def update_position(self, dx, dy):
-        """Update the position of the slider."""
+        """
+        Update the position of the slider based on the given deltas.
+
+        Parameters
+        ----------
+        dx : int
+            The change in the x-coordinate.
+        dy : int
+            The change in the y-coordinate.
+        """
         self.x += dx
         self.y += dy
         self.rect.topleft = (self.x, self.y)
         self.notify_observers(self.current_value)
 
     def is_clicked(self, x, y):
+        """
+        Check if the slider is clicked based on given coordinates.
+
+        Parameters
+        ----------
+        x : int
+            The x-coordinate of the click.
+        y : int
+            The y-coordinate of the click.
+
+        Returns
+        -------
+        bool
+            True if the slider was clicked, otherwise False.
+        """
         return self.rect.collidepoint(x, y)
 
     def update_value_from_pos(self, x):
+        """
+        Update the slider's current value based on the handle's x-coordinate.
+
+        Parameters
+        ----------
+        x : int
+            The x-coordinate of the handle.
+        """
         # Clamp the x-position within the bounds of the slider.
         x = max(self.x + self.radius, min(self.x + self.width - self.radius, x))
 
@@ -113,8 +202,14 @@ class Slider(UIElement, Observable):
         self.notify_observers(self.current_value)
 
     def update(self, value):
-        # print("UPDATING", value)
-        """Update the slider based on received values."""
+        """
+        Update the slider based on received values or range.
+
+        Parameters
+        ----------
+        value : int, float, or tuple
+            If tuple, indicates a range with (min_value, max_value). Otherwise, indicates a single value.
+        """
         if isinstance(value, tuple):  # Indicates range values
             self.min_value, self.max_value = value
             self.current_value = max(self.min_value, min(self.max_value, self.current_value))
@@ -124,6 +219,14 @@ class Slider(UIElement, Observable):
             self.update_value_from_pos(self.x + relative_x)
 
     def serialize(self):
+        """
+        Serialize the slider's data into a dictionary.
+
+        Returns
+        -------
+        dict
+            Dictionary containing slider's serialized data.
+        """
         data = super().serialize()  # Get base class serialization data.
         data.update({
             "type": "Slider",
@@ -136,19 +239,31 @@ class Slider(UIElement, Observable):
 
     @staticmethod
     def deserialize(data):
+        """
+        Create a new Slider instance from the provided serialized data.
+
+        Parameters
+        ----------
+        data : dict
+            The serialized slider data.
+
+        Returns
+        -------
+        Slider
+            A new Slider instance.
+        """
         width = data.get("width", 400)  # Default to 400 if width is not present.
         slider = Slider(data["x"], data["y"], width, data["min_value"], data["max_value"])
         slider.current_value = data["current_value"]
         return slider
 
 
-# Colors
-WHITE = (255, 255, 255)
-
-# Screen dimensions
-WIDTH, HEIGHT = 800, 600
-
 def main():
+    # Colors
+    WHITE = (255, 255, 255)
+
+    # Screen dimensions
+    WIDTH, HEIGHT = 800, 600
     pygame.init()
     pygame.font.init()
 

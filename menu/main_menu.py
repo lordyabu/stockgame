@@ -2,6 +2,7 @@ import pygame
 from menu.switch_button import SwitchButton
 from menu.menu_button import MenuButton
 from utils.uiux import UIElement
+
 class Menu(UIElement):
     """
     A class for creating an interactive menu in a Pygame screen.
@@ -16,20 +17,35 @@ class Menu(UIElement):
     Methods:
         toggle(): Toggles the visibility of the menu.
         display(screen): Display the menu on the Pygame screen.
+        update_position(x, y): Update the menu's position.
         serialize(): Convert the menu object into a serializable dictionary.
+        update_position_from_button(menu_button_x, menu_button_y, menu_button_height): Update the menu's position based on a MenuButton's position.
     """
+
     def __init__(self, x, y):
-        super().__init__(x, y)  # Call the parent class constructor
-        self.rect = pygame.Rect(self.x, self.y, 100, 200)  # Use self.x and self.y from UIElement
+        """
+        Initialize a Menu instance.
+
+        Args:
+            x (int): The x-coordinate position of the menu.
+            y (int): The y-coordinate position of the menu.
+        """
+        super().__init__(x, y)
+        self.rect = pygame.Rect(self.x, self.y, 100, 200)
         self.is_active = False
         self.lock_button = SwitchButton(self.x + 10, self.y + 10, 80, 40)
         self.save_button = MenuButton(self.x + 10, self.y + 60, 80, 40, text="Save")
         self.load_button = MenuButton(self.x + 10, self.y + 110, 80, 40, text="Load")
 
     def update_position(self, x, y):
-        """Update the menu's position."""
+        """
+        Update the menu's position.
+
+        Args:
+            x (int): The new x-coordinate position of the menu.
+            y (int): The new y-coordinate position of the menu.
+        """
         self.rect.topleft = (x, y)
-        # Update positions of contained elements accordingly
         self.lock_button.rect.topleft = (x + 10, y + 10)
         self.save_button.rect.topleft = (x + 10, y + 60)
         self.load_button.rect.topleft = (x + 10, y + 110)
@@ -43,10 +59,7 @@ class Menu(UIElement):
         """
         if not self.is_active:
             return
-        # Create a transparent surface for the menu
         menu_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-
-        # Draw the semi-transparent background of the menu on the transparent surface
         pygame.draw.rect(menu_surface, (200, 200, 200, 50), (0, 0, self.rect.width, self.rect.height))
         self.lock_button.display(screen)
         self.save_button.display(screen)
@@ -61,9 +74,14 @@ class Menu(UIElement):
         """
         self.is_active = not self.is_active
 
-
     def serialize(self):
-        data = super().serialize()  # Get base class serialization data
+        """
+        Convert the menu object into a serializable dictionary.
+
+        Returns:
+            dict: A dictionary containing serialized data of the menu.
+        """
+        data = super().serialize()
         data.update({
             "type": "Menu",
             "is_active": self.is_active,
@@ -72,7 +90,14 @@ class Menu(UIElement):
         return data
 
     def update_position_from_button(self, menu_button_x, menu_button_y, menu_button_height):
-        """Update the menu's position based on a MenuButton's position."""
+        """
+        Update the menu's position based on a MenuButton's position.
+
+        Args:
+            menu_button_x (int): The x-coordinate position of the MenuButton.
+            menu_button_y (int): The y-coordinate position of the MenuButton.
+            menu_button_height (int): The height of the MenuButton.
+        """
         self.rect.topleft = (menu_button_x, menu_button_y + menu_button_height)
 
     @staticmethod
@@ -88,5 +113,4 @@ class Menu(UIElement):
         """
         menu = Menu(data["x"], data["y"])
         menu.is_active = data.get("is_active", False)
-        # Might do children here
         return menu

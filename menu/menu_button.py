@@ -2,8 +2,42 @@ import pygame
 from utils.uiux import UIElement
 
 class MenuButton(UIElement):
+    """
+    A class for creating a menu button in a Pygame screen.
+
+    Attributes:
+        width (int): The width of the button.
+        height (int): The height of the button.
+        text (str): The text displayed on the button.
+        font (pygame.font.Font): The font used for rendering the text.
+        rect (pygame.Rect): The rectangle area of the button.
+        active_color (tuple): The color of the button when active (hovered/clicked).
+        passive_color (tuple): The default color of the button.
+        color (tuple): The current color of the button.
+
+    Methods:
+        display(screen): Display the button on the Pygame screen.
+        handle_events(event): Handle Pygame events for the button.
+        hover(): Change the button color when hovered.
+        update_position(dx, dy): Update the button's position by given deltas.
+        serialize(): Convert the button object into a serializable dictionary.
+
+    Example:
+        button = MenuButton(100, 100, 120, 40, text="Start")
+        button.display(screen)
+    """
 
     def __init__(self, x, y, width, height, text="Menu"):
+        """
+        Initialize a MenuButton instance.
+
+        Args:
+            x (int): The x-coordinate position of the button.
+            y (int): The y-coordinate position of the button.
+            width (int): The width of the button.
+            height (int): The height of the button.
+            text (str): The text displayed on the button (default is "Menu").
+        """
         super().__init__(x, y)
         self.width, self.height = width, height
         self.text = text
@@ -14,6 +48,12 @@ class MenuButton(UIElement):
         self.color = self.passive_color  # Current color
 
     def display(self, screen):
+        """
+        Display the button on the Pygame screen.
+
+        Args:
+            screen (pygame.Surface): The Pygame surface where the button will be displayed.
+        """
         # Create a new surface for the button with alpha transparency
         button_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
 
@@ -35,16 +75,23 @@ class MenuButton(UIElement):
         screen.blit(button_surface, (self.rect.x, self.rect.y))
 
     def handle_events(self, event):
+        """
+        Handle Pygame events for the button.
+
+        Args:
+            event (pygame.event.Event): The Pygame event to handle.
+        """
         if self.rect.collidepoint(pygame.mouse.get_pos()):
             self.color = self.active_color
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                # Add functionality for the button when clicked
                 pass
         else:
             self.color = self.passive_color
 
-
     def hover(self):
+        """
+        Change the button color when hovered.
+        """
         if self.rect.collidepoint(pygame.mouse.get_pos()):
             self.color = self.active_color
         else:
@@ -63,6 +110,12 @@ class MenuButton(UIElement):
         self.rect.topleft = (self.x, self.y)
 
     def serialize(self):
+        """
+        Convert the button object into a serializable dictionary.
+
+        Returns:
+            dict: A dictionary containing serialized data of the button.
+        """
         data = super().serialize()  # Get base class serialization data
         data.update({
             "type": "MenuButton",

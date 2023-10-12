@@ -6,22 +6,23 @@ class Clock(UIElement):
     """
     A class for displaying a digital clock on a Pygame screen.
 
-    Attributes:
-        x_position (int): The x-coordinate position of the clock on the screen.
-        y_position (int): The y-coordinate position of the clock on the screen.
-        text_color (str): The color of the clock's text. Default is "black".
-        border_color (str): The color of the clock's border. Default is "black".
-        bg_color (str): The background color of the clock. Default is "darkGray".
 
     Constants:
         COLOR_MAP (dict): A dictionary mapping color names to RGB values.
 
-    Methods:
-        display(screen): Display the clock on the Pygame screen.
+    Methods
+    -------
+    display(screen):
+        Displays the current time on the Pygame screen.
+    update_position(dx, dy):
+        Updates the position of the clock on the screen by the given deltas.
+    resize(new_width, new_height):
+        Resizes the clock's display area to the specified dimensions.
+    serialize():
+        Returns a serialized representation of the clock instance as a dictionary.
+    deserialize(data):
+        Returns a Clock instance created from the provided serialized data.
 
-    Example:
-        clock_instance = Clock(10, 10, text_color="lightRed", border_color="darkRed", bg_color="lightGray")
-        clock_instance.display(screen)
     """
 
     COLOR_MAP = {
@@ -38,6 +39,39 @@ class Clock(UIElement):
 
     def __init__(self, x=10, y=10, width=None, height=None, text_color="black", border_color="black",
                  bg_color="darkGray"):
+        """
+        Initializes a Clock instance with the specified position, dimensions, and colors.
+
+        Parameters
+        ----------
+        x : int, optional
+            The x-coordinate position of the clock on the screen. Default is 10.
+        y : int, optional
+            The y-coordinate position of the clock on the screen. Default is 10.
+        width : int, optional
+            The width of the clock. If not provided, the default width will be 150.
+        height : int, optional
+            The height of the clock. If not provided, the default height will be 50.
+        text_color : str, optional
+            The color of the clock's text. Must be a key in the COLOR_MAP. Default is "black".
+        border_color : str, optional
+            The color of the clock's border. Must be a key in the COLOR_MAP. Default is "black".
+        bg_color : str, optional
+            The background color of the clock. Must be a key in the COLOR_MAP. Default is "darkGray".
+
+        Attributes
+        ----------
+        rect : pygame.Rect
+            The rectangle representing the clock's position and size on the screen.
+        text_rgb : tuple[int, int, int]
+            RGB values representing the text color of the clock.
+        border_rgb : tuple[int, int, int]
+            RGB values representing the border color of the clock.
+        bg_rgb : tuple[int, int, int]
+            RGB values representing the background color of the clock.
+        font : pygame.font.Font
+            Font object used to render the clock's text.
+        """
         super().__init__(x, y)
         self.width = width if width else 150
         self.height = height if height else 50
@@ -52,6 +86,18 @@ class Clock(UIElement):
 
 
     def display(self, screen):
+        """
+        Renders the current time on the given Pygame screen.
+
+        The time is displayed in the format '%I:%M:%S %p'. The method also handles the rendering of the clock's background
+        and border colors based on the instance's attributes.
+
+        Parameters
+        ----------
+        screen : pygame.Surface
+            The Pygame screen on which the clock is rendered.
+
+        """
         current_time = datetime.now().strftime('%I:%M:%S %p')
 
         start_x_position = self.x
@@ -89,14 +135,42 @@ class Clock(UIElement):
         pygame.draw.rect(screen, self.border_rgb, (start_x_position - 5, self.y - 5, max_width + 10, max_char_height + 10), 2)
 
     def update_position(self, dx, dy):
+        """
+        Updates the position of the Clock by the given deltas.
+
+        Parameters
+        ----------
+        dx : int
+            The change in x-coordinate.
+        dy : int
+            The change in y-coordinate.
+        """
         self.x += dx
         self.y += dy
         self.rect.topleft = (self.x, self.y)
 
     def resize(self, new_width, new_height):
+        """
+        Resizes the Clock to the given width and height.
+
+        Parameters
+        ----------
+        new_width : int
+            The new width for the Clock.
+        new_height : int
+            The new height for the Clock.
+        """
         self.set_size(new_width, new_height)  # Use the base class's method
 
     def serialize(self):
+        """
+        Serializes the Clock instance into a dictionary for saving its state.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the serialized Clock data.
+        """
         data = super().serialize()
         data.update({
             'type': 'Clock',
@@ -108,6 +182,19 @@ class Clock(UIElement):
 
     @staticmethod
     def deserialize(data):
+        """
+        Creates a Clock instance from serialized data.
+
+        Parameters
+        ----------
+        data : dict
+            Dictionary containing serialized Clock data.
+
+        Returns
+        -------
+        Clock
+            A Clock instance constructed from the serialized data.
+        """
         clock = Clock(
             x=data["x"],
             y=data["y"],

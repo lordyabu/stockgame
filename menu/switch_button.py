@@ -1,5 +1,6 @@
 import pygame
 from utils.uiux import UIElement
+
 class SwitchButton(UIElement):
     """
     A class representing a toggle (switch) button in a Pygame screen.
@@ -20,6 +21,7 @@ class SwitchButton(UIElement):
         button.toggle()
         button.display(screen)
     """
+
     def __init__(self, x, y, width, height, text_on="Locked", text_off="Unlocked"):
         """
         Initialize a SwitchButton instance.
@@ -79,6 +81,12 @@ class SwitchButton(UIElement):
         screen.blit(button_surface, (self.rect.x, self.rect.y))
 
     def serialize(self):
+        """
+        Convert the button object into a serializable dictionary.
+
+        Returns:
+            dict: A dictionary containing serialized data of the button.
+        """
         data = super().serialize()  # Get base class serialization data
         data.update({
             "type": "SwitchButton",

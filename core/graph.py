@@ -3,7 +3,7 @@ from utils.strategy_rules import Strategy
 import pygame
 import pandas as pd
 from core.clock import Clock
-from utils.observer_pattern import Observer, Observable
+from utils.observering import Observer, Observable
 from utils.uiux import UIElement
 # from analysis.slider import Slider
 from utils.mini_button import TextButton
@@ -24,22 +24,42 @@ class Graph(UIElement, Observer, Observable):
     """
     A class for plotting and displaying graphs on a Pygame screen.
 
-    Attributes:
-        is_live (bool): Flag indicating if the graph is live or static.
-        size_multiplier (float): Multiplier to adjust the graph's display size.
-        df (pd.DataFrame): The data for the graph, stored as a Pandas DataFrame.
-        df_path (str): Path to the data file from which the DataFrame was loaded.
-        x (int): The x-coordinate of the top-left corner of the graph.
-        y (int): The y-coordinate of the top-left corner of the graph.
-        width (int): Width of the graph.
-        height (int): Height of the graph.
-        rect (pygame.Rect): The rectangle object representing the graph's position and size.
+    Constants:
+        WHITE (tuple): RGB color tuple for white.
+        MARGIN (int): Margin size for the graph.
+        spacing (int): Spacing between graphs.
+        current_x_offset (int): Current x-offset for arranging multiple graphs.
 
     Methods:
-        display(screen): Display the graph on the Pygame screen.
-        update_position(dx, dy): Update the position of the graph by dx and dy.
-        serialize(): Convert the graph object into a serializable dictionary.
+        __init__(self, is_live=False, data_file=None, column='Price',
+                 size_multiplier=1.0, y_offset_percentage=0.6,
+                 x=None, y=None, width=None, height=None, color=(0, 0, 255),
+                 title='', original_title='', strategy_active=False, strategy_name='Strategy', prof_coloring=False, bar_chart=0, grid=True, font=None)
+        setup_grid(self)
+        create_toggle_buttons(self)
+        _create_button(self, text, position, width, height, callback)
+        _draw_grid_on_surface(self, surface, line_color, line_spacing)
+        toggle_grid(self)
+        toggle_bar(self)
+        toggle_strategy(self)
+        toggle_color(self)
+        calculate_colors(self)
+        set_highlight_index(self, index)
+        get_overlapping_graphs(self, all_graphs)
+        display(self, screen, all_graphs=[])
+        render_transparent_text(self, surface, text, font, color, position, alpha)
+        compute_moving_average(self, window_size=3)
+        set_data_file(self, day)
+        update_position(self, dx, dy, other_graphs=[])
+        update(self, value)
+        update_range(self, start_idx, end_idx)
+        set_display_range(self, start_idx, end_idx)
+        update_day(self, day_value)
+        serialize(self)
+        deserialize(self, data)
     """
+
+
     current_x_offset = 0  # Class variable to track x-offset for new graphs
     spacing = 20  # Space between each graph
     MARGIN = 10  # Margin for all sides
@@ -52,7 +72,7 @@ class Graph(UIElement, Observer, Observable):
         Initialize a Graph instance.
 
         Args:
-            is_live (bool): Flag indicating if the graph is live or static. Default is False.
+            is_live (bool, optional): Flag indicating if the graph is live or static. Default is False.
             data_file (str, optional): Path to the CSV data file. Default is None.
             size_multiplier (float, optional): Multiplier to adjust the graph's display size. Default is 1.0.
             y_offset_percentage (float, optional): Y-offset percentage from the top of the screen. Default is 0.6.
@@ -60,21 +80,35 @@ class Graph(UIElement, Observer, Observable):
             y (int, optional): The y-coordinate of the top-left corner. Default is None.
             width (int, optional): The width of the graph. Default is None.
             height (int, optional): The height of the graph. Default is None.
+            color (tuple, optional): The RGB color tuple for the graph. Default is (0, 0, 255).
+            title (str, optional): The title of the graph. Default is an empty string.
+            original_title (str, optional): The original title of the graph. Default is an empty string.
+            strategy_active (bool, optional): Flag indicating if a strategy is active. Default is False.
+            strategy_name (str, optional): The name of the strategy. Default is 'Strategy'.
+            prof_coloring (bool, optional): Flag indicating if color-coding by profit is enabled. Default is False.
+            bar_chart (int, optional): Flag indicating the type of chart (0 for line, 1 for candlestick, 2 for basic). Default is 0.
+            grid (bool, optional): Flag indicating if the grid is enabled. Default is True.
+            font (pygame.font.Font, optional): The font for text rendering. Default is None.
         """
-        UIElement.__init__(self, x, y)
-        Observer.__init__(self)
-        Observable.__init__(self)
-        self.is_live = is_live
-        self.size_multiplier = size_multiplier
+        # Initialize the Graph instance.
+        UIElement.__init__(self, x, y)  # Initialize UIElement base class.
+        Observer.__init__(self)  # Initialize Observer base class.
+        Observable.__init__(self)  # Initialize Observable base class.
+
+        # Graph attributes
+        self.is_live = is_live  # Flag indicating if the graph is live or static.
+        self.size_multiplier = size_multiplier  # Multiplier to adjust the graph's display size.
+
         try:
-            self.df = pd.read_csv(data_file) if data_file else None
+            self.df = pd.read_csv(data_file) if data_file else None  # Read data from CSV file if provided.
         except FileNotFoundError:
             print(f"Error: Data file {data_file} not found.")
             self.df = None
 
-        self.df_path = data_file
-        self.column = column
+        self.df_path = data_file  # Store the data file path.
+        self.column = column  # Column of data to display on the graph.
 
+        # Initialize graph dimensions and position
         if x is None or y is None or width is None or height is None:
             # Define size only if not provided
             self.width = (WIDTH - 2 * Graph.MARGIN) * 0.5 * size_multiplier
@@ -92,28 +126,21 @@ class Graph(UIElement, Observer, Observable):
             self.width = width
             self.height = height
 
+        # Create a bounding rectangle for the graph.
         self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
 
-
-
-        self.current_time_highlight = None  # New attribute to hold the current time from the slider.
+        # Graph visual attributes
+        self.current_time_highlight = None  # Attribute to hold the current time from the slider.
         self.point_radius = 5  # Size of the point to display on the graph for the current time.
-
-        self.highlight_index = None
-
-        self.color = color
-        self.title_color = darken_color(color)
-        self.title = [title, self.title_color]
-
-        self.original_title = original_title
-
-        # Extract the filename from the data_file path
-        self.data_filename = os.path.basename(data_file) if data_file else None
-
-        self.strategy_name = strategy_name  # or any default name for your strategy column
-        self.strategy_active = False
-
-        self.strategy_dir = data_file.split("/")[2]
+        self.highlight_index = None  # Index of the highlighted point on the graph.
+        self.color = color  # Graph color.
+        self.title_color = darken_color(color)  # Darkened title color.
+        self.title = [title, self.title_color]  # Graph title and its color.
+        self.original_title = original_title  # Original title of the graph.
+        self.data_filename = os.path.basename(data_file) if data_file else None  # Extract filename from data file path.
+        self.strategy_name = strategy_name  # Default name for the strategy column.
+        self.strategy_active = False  # Flag indicating if the strategy is active.
+        self.strategy_dir = data_file.split("/")[2]  # Extract directory from data file path.
 
         # Initialize the strategy
         self.strategy = Strategy()
@@ -121,52 +148,67 @@ class Graph(UIElement, Observer, Observable):
         # Set the strategy_active attribute
         self.strategy_active = strategy_active
 
+        # Define the display range based on the loaded data
         self.display_range = (0, len(self.df) - 1) if self.df is not None else (0, 0)
 
-        self.prof_coloring = prof_coloring
+        self.prof_coloring = prof_coloring  # Flag for profit-based coloring of the graph.
 
-
-
-
+        # Calculate colors for the graph
         self.colors = self.calculate_colors()
 
-        self.bar_chart = bar_chart
+        self.bar_chart = bar_chart  # Type of chart to display (0: Candlestick, 1: OHLC, 2: Line).
 
-        self.df['DateTime'] = pd.to_datetime(self.df['DateTime'], format='%m/%d/%Y %H:%M')
+        self.df['DateTime'] = pd.to_datetime(self.df['DateTime'],
+                                             format='%m/%d/%Y %H:%M')  # Convert 'DateTime' to datetime.
 
-
-
-        # Assuming 'DateTime' column is of type datetime64
+        # Assuming 'DateTime' column is of type datetime64, set it as the index.
         self.df.set_index('DateTime', inplace=True)
 
-        # Resample in 5-minute intervals and compute OHLC
+        # Resample in 5-minute intervals and compute OHLC data
         self.ohlc_data = self.df.resample('5T').agg({
             'Price': ['first', 'max', 'min', 'last']
         })
 
         self.ohlc_data.columns = ['Open', 'High', 'Low', 'Close']
-        self.ohlc_data.dropna(inplace=True)  # drop any empty intervals
+        self.ohlc_data.dropna(inplace=True)  # Drop any empty intervals.
 
-        self.label_color = (192, 192, 192)
+        self.label_color = (192, 192, 192)  # Label color for the graph.
 
+        # Setup grid
         self.setup_grid(grid)
 
-        self.font = font
-
+        self.font = font  # Font for rendering text on the graph.
 
     def setup_grid(self, grid):
+        """
+        Set up the grid for the graph.
+
+        Parameters:
+        - grid (bool): Flag indicating whether to display the grid.
+
+        Returns:
+        - None
+        """
+        # Create a surface for drawing the grid with transparency.
         self.grid_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
 
+        # Set the grid attribute based on the provided value.
         self.grid = grid
 
         if self.grid:
+            # If grid is enabled, draw the grid on the surface.
             self._draw_grid_on_surface()
 
+        # Create toggle buttons for grid-related settings.
         self.create_toggle_buttons()
 
-
     def create_toggle_buttons(self):
-        """Create interactive toggle buttons for the graph."""
+        """
+        Create interactive toggle buttons for the graph.
+
+        Returns:
+            None
+        """
         self.toggle_button_grid = self._create_button(self.x + 75, "Grid On", self.toggle_grid)
         self.toggle_button_chart = self._create_button(self.x + 150, "Candle", self.toggle_bar)
         self.toggle_button_strategy = self._create_button(self.x + 225, "Indicators On", self.toggle_strategy)
@@ -174,11 +216,26 @@ class Graph(UIElement, Observer, Observable):
 
 
     def _create_button(self, x_pos, label, action):
-        """Helper function to create a button."""
+        """
+        Helper function to create a button.
+
+        Parameters:
+            x_pos (int): The x-coordinate of the button's top-left corner.
+            label (str): The text label for the button.
+            action (function): The function to be executed when the button is clicked.
+
+        Returns:
+            UIElement: The created button element.
+        """
         return TextButton(x_pos, self.y - 29, label, pygame.font.SysFont('arial', 16), (255, 255, 255), action, alpha=100)
 
     def _draw_grid_on_surface(self):
-        """Draws the transparent grid onto self.grid_surface."""
+        """
+        Draws the transparent grid onto self.grid_surface.
+
+        Returns:
+            None
+        """
         alpha_value = 64  # Adjust this value for desired transparency; lower value means more transparent
 
         interval_step = max(len(self.df) // 7, 1)  # Ensure it's at least 1
@@ -197,6 +254,12 @@ class Graph(UIElement, Observer, Observable):
                              (self.width, int(y_pos)), 1)
 
     def toggle_grid(self):
+        """
+        Toggle the display of the grid and update the corresponding button text.
+
+        Returns:
+            None
+        """
         self.grid = not self.grid
         if self.grid:
             self.toggle_button_grid.text = "Grid On"
@@ -206,6 +269,12 @@ class Graph(UIElement, Observer, Observable):
                                                                   self.toggle_button_grid.color)
 
     def toggle_bar(self):
+        """
+        Cycle through different bar chart display modes and update the button text.
+
+        Returns:
+            None
+        """
         self.bar_chart += 1
         if self.bar_chart == 3:
             self.bar_chart = 0
@@ -219,6 +288,12 @@ class Graph(UIElement, Observer, Observable):
                                                                   self.toggle_button_chart.color)
 
     def toggle_strategy(self):
+        """
+        Toggle the display of strategy indicators and update the corresponding button text.
+
+        Returns:
+            None
+        """
         self.strategy_active = not self.strategy_active
         if self.strategy_active:
             self.toggle_button_strategy.text = "Indicator On"
@@ -228,6 +303,12 @@ class Graph(UIElement, Observer, Observable):
                                                                   self.toggle_button_strategy.color)
 
     def toggle_color(self):
+        """
+        Toggle the color scheme between profit-based (RG Color) and fixed (B Color).
+
+        Returns:
+            None
+        """
         self.prof_coloring = not self.prof_coloring
         if self.prof_coloring:
             self.toggle_button_color.text = "RG Color"
@@ -237,7 +318,12 @@ class Graph(UIElement, Observer, Observable):
                                                                   self.toggle_button_color.color)
 
     def calculate_colors(self):
-        """Calculate colors for data points based on the previous average."""
+        """
+        Calculate colors for data points based on the previous average.
+
+        Returns:
+            List[tuple]: A list of RGB color tuples for each data point.
+        """
         if self.df is None or 'Price' not in self.df:
             return []
 
@@ -263,15 +349,51 @@ class Graph(UIElement, Observer, Observable):
         self.highlight_index = index
 
     def get_overlapping_graphs(self, other_graphs):
-        """Get the overlapping graphs."""
+        """
+        Get the overlapping graphs with the current graph.
+
+        Args:
+            other_graphs (list): List of other graph objects to check for overlap.
+
+        Returns:
+            List[Graph]: List of graph objects that overlap with the current graph.
+        """
         overlapping_graphs = [graph for graph in other_graphs if self.rect.colliderect(graph.rect)]
         return overlapping_graphs
 
     def display(self, screen, all_graphs=[]):
+        """
+        Display the graph on the given screen. This Function is scuffed but works.
+
+        Args:
+            screen (pygame.Surface): The Pygame surface to display the graph on.
+            all_graphs (list): List of other graph objects for overlap detection.
+
+        Returns:
+            None
+        """
         def render_transparent_text(surface, text, font, color, position, alpha):
+            """
+            Render transparent text on a given surface.
+
+            Args:
+                surface (pygame.Surface): The Pygame surface to render the text on.
+                text (str): The text to be rendered.
+                font (pygame.font.Font): The font used for rendering.
+                color (tuple): RGB color tuple for the text.
+                position (tuple): (x, y) position to render the text.
+                alpha (int): Transparency value for the text.
+
+            Returns:
+                None
+            """
+
             text_surf = font.render(text, True, color).convert_alpha()
             text_surf.fill((255, 255, 255, alpha), None, pygame.BLEND_RGBA_MULT)
             surface.blit(text_surf, position)
+
+
+
         alpha_value = 128
         pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, self.width, self.height), 2)
 
@@ -507,26 +629,39 @@ class Graph(UIElement, Observer, Observable):
 
 
     def compute_moving_average(self, window_size=3):
+        """
+        Compute the moving average of the graph's data.
+
+        Args:
+            window_size (int, optional): The size of the moving average window. Default is 3.
+
+        Returns:
+            pandas.Series or None: The moving average values if data is available, otherwise None.
+        """
         if self.df is not None:
             return self.df[self.column].rolling(window=window_size).mean()
         return None
 
     def set_data_file(self, day):
+        """
+        Set the data file for the graph based on the specified day.
+
+        Args:
+            day (int): The day value to set for the data file.
+
+        Returns:
+            None
+        """
         if not self.data_filename:  # If filename not set, don't continue
             return
 
         try:
-            # print("here")
             new_path = f"./data/{self.strategy_dir}/Day{day}.csv"
-            # print(new_path)
-            # print(new_path)
             new_df = pd.read_csv(new_path)
             self.df_path = new_path
             if not new_df.empty:
                 self.df_path = new_path
                 self.df = new_df
-                # print(f"Loaded data for Day{day}. First few rows:")
-                # print(self.df.head())  # Printing the first few rows of the new data
                 self.df['DateTime'] = pd.to_datetime(self.df['DateTime'], format='%m/%d/%Y %H:%M')
                 self.df.set_index('DateTime', inplace=True)
                 self.ohlc_data = self.df.resample('5T').agg({
@@ -560,13 +695,18 @@ class Graph(UIElement, Observer, Observable):
 
 
     def update(self, value):
-        """Called when the slider's value changes."""
+        """
+        Update the graph when the slider's value changes.
+
+        Args:
+            value (int or tuple): The new value of the slider. Can be a single point or a range.
+
+        Returns:
+            None
+        """
         if isinstance(value, tuple):  # Range slider updates
             start_idx, end_idx = value
             self.update_range(start_idx, end_idx)
-
-            # Notify observers (which includes the single point slider) about the new range.
-            # print("ADSD")
             self.notify_observers(value)
         else:
             # Single point slider updates
@@ -576,12 +716,29 @@ class Graph(UIElement, Observer, Observable):
                 self.highlight_index = max(0, min(len(self.df) - 1, self.highlight_index))
 
     def update_range(self, start_idx, end_idx):
-        # print("USING THIS HERE")
-        """Called when the range slider's value changes."""
+        """
+        Update the graph's displayed range when the range slider's value changes.
+
+        Args:
+            start_idx (int): The start index of the new range.
+            end_idx (int): The end index of the new range.
+
+        Returns:
+            None
+        """
         self.set_display_range(start_idx, end_idx)
 
     def set_display_range(self, start_idx, end_idx):
-        """Update the graph's displayed range."""
+        """
+        Set the displayed range for the graph.
+
+        Args:
+            start_idx (int): The start index of the new range.
+            end_idx (int): The end index of the new range.
+
+        Returns:
+            None
+        """
         if self.df is not None:
             max_idx = len(self.df) - 1
             start_idx = max(0, min(max_idx, start_idx))
@@ -589,6 +746,15 @@ class Graph(UIElement, Observer, Observable):
             self.display_range = (start_idx, end_idx)
 
     def update_day(self, day_value):
+        """
+        Update the graph's data file based on the specified day value.
+
+        Args:
+            day_value (int): The day value to set for the data file.
+
+        Returns:
+            None
+        """
         # Handle the change in day and update the graph's data accordingly.
         self.set_data_file(day_value)
 
@@ -653,14 +819,14 @@ class Graph(UIElement, Observer, Observable):
         )
 
 
-# Colors
-WHITE = (255, 255, 255)
-
-# Screen dimensions
-WIDTH, HEIGHT = 800, 600
 
 
 def main():
+    # Colors
+    WHITE = (255, 255, 255)
+
+    # Screen dimensions
+    WIDTH, HEIGHT = 800, 600
     pygame.init()
     pygame.font.init()
 

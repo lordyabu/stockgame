@@ -1,8 +1,6 @@
 import json
 import pygame
-from core.clock import Clock
 from core.graph import Graph
-from menu.switch_button import SwitchButton
 from menu.main_menu import Menu
 from menu.menu_button import MenuButton
 from analysis.slider import Slider
@@ -10,12 +8,29 @@ from analysis.table import DataTable
 from core.dayswitch import DaySwitch
 import os
 from analysis.range_slider import RangeSlider
+
 def save_preset(projections, filename='presets/preset.json'):
+    """
+    Save a list of projections to a JSON file.
+
+    Args:
+        projections (list): A list of projection objects.
+        filename (str, optional): The name of the JSON file to save. Default is 'presets/preset.json'.
+    """
     with open(filename, 'w') as f:
         json.dump([proj.serialize() for proj in projections], f)
 
-
 def load_preset(filename='presets/preset.json', font=None):
+    """
+    Load a list of projections from a JSON file.
+
+    Args:
+        filename (str, optional): The name of the JSON file to load. Default is 'presets/preset.json'.
+        font (pygame.Font, optional): The font to use for rendering. Default is None.
+
+    Returns:
+        list: A list of loaded projection objects.
+    """
     Graph.current_x_offset = 0  # Reset the offset
 
     with open(filename, 'r') as f:
@@ -83,8 +98,16 @@ def load_preset(filename='presets/preset.json', font=None):
 
     return projections
 
-
 def load_project_state(projections):
+    """
+    Load a saved project state.
+
+    Args:
+        projections (list): A list of projection objects.
+
+    Returns:
+        tuple: A tuple containing the loaded components (Slider, RangeSlider, MenuButton, Menu, DataTable, DaySwitch, Graphs).
+    """
     # Load the saved state
     loaded_projections = load_preset()
 
@@ -101,7 +124,6 @@ def load_project_state(projections):
     graphs = [proj for proj in projections if isinstance(proj, Graph)]
     range_slider = next((proj for proj in projections if isinstance(proj, RangeSlider)), None)
 
-
     # Reconnecting the observers
     if slider and data_table:
         slider.add_observer(data_table)
@@ -112,7 +134,7 @@ def load_project_state(projections):
 
     # Reconnect the DaySwitch object to the loaded graphs
     if day_switch and graphs:
-        day_switch.graphs = graphs
+        day_switch.add_graphs(graphs)
 
     if range_slider and graphs:
         for graph in graphs:
