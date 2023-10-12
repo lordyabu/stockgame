@@ -5,6 +5,22 @@ A dynamic application to visualize and interact with stock-related information.
 - `numpy`
 - `pygame`
 
+## Installation
+
+1. Clone the repository:
+git clone https://github.com/lordyabu/stockgame.git
+
+2. Navigate to the cloned directory:
+cd stockgame
+
+3. Paste your data into folder
+
+4. Run
+
+```python
+python main.py --num-vars-table 25 # Adjust the `--num-vars-table` parameter based on your preference.
+```
+
 ## Features
 
 **Presets**:
@@ -22,20 +38,3 @@ A dynamic application to visualize and interact with stock-related information.
 - Display values present on the graph.
 - The data is linked with a point iterator that can traverse across the graph, allowing you to examine specific data points closely.
 ![output_table (1)](https://github.com/lordyabu/stockgame/assets/92772420/4210ad35-8199-4405-aa31-dae777e2ebcd)
-
-
-## Installation
-
-1. Clone the repository:
-git clone https://github.com/lordyabu/stockgame.git
-
-2. Navigate to the cloned directory:
-cd stockgame
-
-3. Paste your data into folder
-
-4. Run
-
-```python
-python main.py --num-vars-table 25 # Adjust the `--num-vars-table` parameter based on your preference.
-```
