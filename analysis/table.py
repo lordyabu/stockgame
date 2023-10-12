@@ -4,6 +4,7 @@ from utils.observer_pattern import Observable, Observer
 from core.graph import Graph
 from analysis.slider import Slider
 from utils.uiux import UIElement
+from analysis.helper_button import Button
 # Colors
 WHITE = (255, 255, 255)
 
@@ -11,14 +12,14 @@ WHITE = (255, 255, 255)
 WIDTH, HEIGHT = 800, 600
 
 class DataTable(UIElement, Observer):
-    def __init__(self, x, y, graphs, font, initial_index=0):
+    def __init__(self, x, y, graphs, font, initial_index=0, visible_rows=10):
         super().__init__(x, y)
         self.graphs = graphs
         self.font = font
         self.current_values = {}
 
         self.row_height = 20
-        self.visible_rows = 50  # Number of rows you want to display at once.
+        self.visible_rows = visible_rows  # Number of rows you want to display at once.
 
         self.height = self.row_height * (self.visible_rows + 1)  # +1 for the headers
         # Assuming an average width of 60 pixels for the DateTime column and each graph column
@@ -57,9 +58,9 @@ class DataTable(UIElement, Observer):
 
     def get_gradient_color(self, value, high_val, avg_val, low_val):
         # Assuming you want a red-to-yellow-to-green gradient
-        high_color = pygame.Color('gray24')
-        avg_color = pygame.Color('gray50')
-        low_color = pygame.Color('white')
+        high_color = pygame.Color('green')
+        avg_color = pygame.Color('white')
+        low_color = pygame.Color('red')
 
         # Determine which segment of the gradient we're in and interpolate
         if value >= avg_val:
@@ -121,12 +122,13 @@ class DataTable(UIElement, Observer):
 
         self.highlighted_row = self.current_index - start_index
 
-
     def display(self, screen):
-        # Draw the white background
-        pygame.draw.rect(screen, WHITE, self.rect)
+        def adjust_color(color, alpha=128):
+            return (color[0] // 2, color[1] // 2, color[2] // 2, alpha)
 
         if self.current_values:
+            # Display Column Names
+            BORDER_COLOR = (127, 127, 127)
             # Display Column Names
             x_offset = self.x
             for idx, column in enumerate(["DateTime"] + [graph.column for graph in self.graphs]):
@@ -134,33 +136,76 @@ class DataTable(UIElement, Observer):
                 if column == "DateTime":
                     column = 'Time'
                 text = self.font.render(column, True, color)
-                screen.blit(text, (x_offset, self.y))
-                x_offset += self.column_widths[
-                                idx] + self.column_spacing  # Using the column width from the list and adding spacing
 
-            # Display Data Row-Wise
+                # Calculate centering for column header text
+                header_text_x = x_offset + (self.column_widths[idx] - text.get_width()) / 2
+                screen.blit(text, (header_text_x, self.y))
+                x_offset += self.column_widths[idx] + self.column_spacing
+
+            border_width = 1
+
+            # Inside the loop where you're displaying data row-wise:
             for row in range(self.visible_rows):
                 x_offset = self.x
+
                 for idx, column in enumerate(self.current_values):
                     value = self.current_values[column][row]
 
                     # Determine text color
-                    text_color = pygame.Color("red") if row == self.highlighted_row else pygame.Color("black")
+                    text_color = pygame.Color("white") if row == self.highlighted_row else pygame.Color("black")
+                    original_color = pygame.Color("black") if column == "DateTime" else self.graphs[idx - 1].color
+                    column_color = adjust_color(original_color)
+
+                    # Draw the left border of each column
+                    pygame.draw.line(screen, column_color,
+                                     (x_offset, self.y + row * self.row_height),
+                                     (x_offset, self.y + (row + 1) * self.row_height), border_width)
 
                     if column in self.column_stats:  # This checks if the column is not DateTime
-                        high_val, avg_val, low_val = self.column_stats[column]
+                        high_val = max(self.current_values[column])
+                        low_val = min(self.current_values[column])
+                        avg_val = sum(self.current_values[column]) / len(self.current_values[column])
+
                         try:
                             cell_bg_color = self.get_gradient_color(value, high_val, avg_val, low_val)
                         except:
-                            # Should be fixed
                             cell_bg_color = (100, 100, 100)
                         cell_rect = pygame.Rect(x_offset, self.y + (row + 1) * self.row_height, self.column_widths[idx],
                                                 self.row_height)
-                        pygame.draw.rect(screen, cell_bg_color, cell_rect)
 
-                    text = self.font.render(f"{value}", True, text_color)  # Use text_color here
-                    screen.blit(text, (x_offset, self.y + (row + 1) * self.row_height))
-                    x_offset += self.column_widths[idx] + self.column_spacing
+                        # Create a temporary surface and fill it with the desired color and alpha transparency
+                        temp_surface = pygame.Surface((self.column_widths[idx], self.row_height), pygame.SRCALPHA)
+                        temp_surface.fill(
+                            (cell_bg_color[0], cell_bg_color[1], cell_bg_color[2], 150))  # 128 for semi-transparency
+
+                        # Blit the surface onto the main screen at the cell's location
+                        screen.blit(temp_surface, (x_offset, self.y + (row + 1) * self.row_height))
+
+                    text_surface = self.font.render(f"{value}", True, text_color)
+
+                    # Calculate the centered x and y positions:
+                    text_x = x_offset + (self.column_widths[idx] - text_surface.get_width()) / 2
+                    text_y = self.y + (row + 1) * self.row_height + (self.row_height - text_surface.get_height()) / 2
+
+                    screen.blit(text_surface, (text_x, text_y))
+
+                    # Increment the x_offset for the next column before drawing the right border
+                    x_offset += self.column_widths[idx]
+
+                    # Draw the right border for each column
+                    pygame.draw.line(screen, column_color,
+                                     (x_offset, self.y + row * self.row_height),
+                                     (x_offset, self.y + (row + 1) * self.row_height), border_width)
+
+                    x_offset += self.column_spacing
+
+                # Draw horizontal line at the bottom of each row
+                pygame.draw.line(screen, pygame.Color("black"),
+                                 (self.x, self.y + (row + 1) * self.row_height),
+                                 (self.x + self.width, self.y + (row + 1) * self.row_height), border_width)
+
+            # Draw a border for the entire table
+            pygame.draw.rect(screen, pygame.Color("black"), self.rect, 1)
 
     def handle_events(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -189,12 +234,13 @@ class DataTable(UIElement, Observer):
         return {
             "type": "DataTable",
             "x": self.x,
-            "y": self.y
+            "y": self.y,
+            'vals_shown' : self.visible_rows
         }
 
     @staticmethod
     def deserialize(data, graphs, font):
-        table = DataTable(data["x"], data["y"], graphs, font)
+        table = DataTable(data["x"], data["y"], graphs, font, visible_rows=data['vals_shown'])
         return table
 
 if __name__ == "__main__":

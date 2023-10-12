@@ -30,24 +30,42 @@ class RangeSlider(UIElement, Observable):
         self.dragging_position = False
 
         self.handle_color = (50, 50, 50)  # Grey for both start and end handles
-        self.radius = 15  # Radius for the circle handles
+        self.radius = 10  # Radius for the circle handles
 
-
+        self.font = pygame.font.SysFont('Arial', 16)
 
     def display(self, screen):
-        # Draw the background of the slider as a thin line
-        pygame.draw.line(screen, self.track_color, (self.x, self.y), (self.x + self.width, self.y), 2)
-
-        # Calculate handle positions
-        start_handle_x = self.rect.x + (self.start_value - self.min_value) / (self.max_value - self.min_value) * self.width
+        start_handle_x = self.rect.x + (self.start_value - self.min_value) / (
+                    self.max_value - self.min_value) * self.width
         end_handle_x = self.rect.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * self.width
+        line_thickness = 3  # Making the line thicker
+        line_alpha = 100  # 78% transparency (adjust this as needed)
 
+        # Drawing the line segments
+        # Leftmost to left handle
+        pygame.draw.line(screen, self.handle_color + (line_alpha,),
+                         (self.x, self.y), (start_handle_x - self.radius, self.y),
+                         line_thickness)
+        # Left handle to right handle
+        pygame.draw.line(screen, self.track_color + (line_alpha,),
+                         (start_handle_x + self.radius, self.y), (end_handle_x - self.radius, self.y),
+                         line_thickness)
+        # Right handle to rightmost
+        pygame.draw.line(screen, self.handle_color + (line_alpha,),
+                         (end_handle_x + self.radius, self.y), (self.x + self.width, self.y),
+                         line_thickness)
+
+        # Draw the handles
         pygame.draw.circle(screen, self.handle_color, (int(start_handle_x), self.y), self.radius)
         pygame.draw.circle(screen, self.handle_color, (int(end_handle_x), self.y), self.radius)
 
-        font = pygame.font.SysFont('Arial', 16)
-        text = font.render('Interval Slider', True, WHITE)
-        screen.blit(text, (self.x + self.width - text.get_width(), self.y - self.radius * 2 - text.get_height()))
+        # Draw the semi-transparent text label
+        text = self.font.render('Interval Slider', True, WHITE)
+        text_surface = pygame.Surface((text.get_width(), text.get_height()), pygame.SRCALPHA)
+        text_surface.blit(text, (0, 0))
+        text_surface.set_alpha(100)
+        screen.blit(text_surface,
+                    (self.x + self.width - text.get_width(), self.y - self.radius * 2 - text.get_height()))
 
     def handle_events(self, event, is_locked=False):
         start_handle_x = self.rect.x + (self.start_value - self.min_value) / (
@@ -61,12 +79,17 @@ class RangeSlider(UIElement, Observable):
             if event.button == 1 and (start_handle_x - clicked_x) ** 2 + (self.y - clicked_y) ** 2 <= self.radius ** 2:
                 self.dragging_start = True
 
+
             # Check if the end handle was clicked
             elif event.button == 1 and (end_handle_x - clicked_x) ** 2 + (self.y - clicked_y) ** 2 <= self.radius ** 2:
                 self.dragging_end = True
 
-            # Right-click to move the entire slider
-            elif self.rect.collidepoint(event.pos) and event.button == 3:
+            BUFFER = 10  # Adjust this value based on how much bigger you want the click area to be
+            enlarged_rect = pygame.Rect(self.rect.x - BUFFER, self.rect.y - BUFFER, self.rect.width + 2 * BUFFER,
+                                        self.rect.height + 2 * BUFFER)
+
+            # Check if the click is inside the enlarged rectangle
+            if enlarged_rect.collidepoint(event.pos) and (event.button == 3 or event.button == 1):
                 if is_locked:
                     self.dragging_position = False
                     return

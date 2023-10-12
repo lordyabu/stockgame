@@ -48,48 +48,50 @@ class Clock(UIElement):
         self.border_rgb = self.COLOR_MAP.get(border_color, self.COLOR_MAP["darkGreen"])
         self.bg_rgb = self.COLOR_MAP.get(bg_color, self.COLOR_MAP["lightGray"])
 
+        self.font = pygame.font.SysFont('Arial', 16)
+
 
     def display(self, screen):
-        """
-        Display the clock on the Pygame screen.
-
-        Args:
-            screen (pygame.Surface): The Pygame surface where the clock will be displayed.
-        """
         current_time = datetime.now().strftime('%I:%M:%S %p')
-        font = pygame.font.Font(None, 36)
 
-        start_x_position = self.x  # Save the starting position for later resetting (CHANGED HERE)
-        x_position = self.x  # CHANGED HERE
+        start_x_position = self.x
+        x_position = self.x
 
         labels = []
+        max_char_height = 0  # Track the maximum character height
 
-        # First, calculate positions and dimensions without drawing
         for char in current_time:
-            label = Label(font, char, self.text_rgb, (x_position, self.y), anchor="topleft")
+            label = Label(self.font, char, self.text_rgb, (x_position, self.y), anchor="topleft")
             if char == '9':
                 label.rect.y -= 2
             x_position += label.rect.width
             labels.append(label)
 
+            # Update the maximum character height
+            max_char_height = max(max_char_height, label.rect.height)
+
         max_width = sum(label.rect.width for label in labels)
-        max_height = max(label.rect.height for label in labels)
 
         # Draw background rectangle
-        pygame.draw.rect(screen, self.bg_rgb, (start_x_position - 5, self.y - 5, max_width + 10, max_height + 10))
+        pygame.draw.rect(screen, self.bg_rgb, (start_x_position - 5, self.y - 5, max_width + 10, max_char_height + 10))
 
-        # Reset x_position for drawing the text
+        # Reset x_position and y_position for drawing the text (centered vertically)
         x_position = start_x_position
+        y_position = self.y + (max_char_height - labels[0].rect.height) // 2
 
         # Draw the text
         for label in labels:
+            label.rect.topleft = (x_position, y_position)
             label.draw(screen)
+            x_position += label.rect.width
 
         # Draw the border rectangle
-        pygame.draw.rect(screen, self.border_rgb, (start_x_position - 5, self.y - 5, max_width + 10, max_height + 10), 2)
+        pygame.draw.rect(screen, self.border_rgb, (start_x_position - 5, self.y - 5, max_width + 10, max_char_height + 10), 2)
 
     def update_position(self, dx, dy):
-        super().update_position(dx, dy)  # Use the base class's update_position
+        self.x += dx
+        self.y += dy
+        self.rect.topleft = (self.x, self.y)
 
     def resize(self, new_width, new_height):
         self.set_size(new_width, new_height)  # Use the base class's method

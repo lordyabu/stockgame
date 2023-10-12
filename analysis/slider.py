@@ -9,7 +9,7 @@ class Slider(UIElement, Observable):
 
         self.width = width
         self.height = 20  # Assuming this is the height of your slider.
-        self.radius = 15  # Radius of the slider handle
+        self.radius = 10  # Radius of the slider handle
 
         self.rect = pygame.Rect(self.x, self.y - self.radius // 2, self.width, self.height + self.radius)
 
@@ -17,8 +17,8 @@ class Slider(UIElement, Observable):
         self.max_value = max_value
         self.current_value = self.min_value
 
-        self.handle_color = (0, 0, 0)  # Black
-        self.track_color = (150, 150, 150)  # Grey
+        self.handle_color = (50, 50, 50)  # Black
+        self.track_color = (200, 200, 200)  # Grey
 
         self.dragging = False
         self.dragging_position = False
@@ -28,18 +28,35 @@ class Slider(UIElement, Observable):
         self.font = pygame.font.SysFont('Arial', 16)  # Use Arial font with a size of 24 pixels.
 
     def display(self, screen):
-        # Draw the background of the slider as a thin line
-        pygame.draw.line(screen, self.track_color, (self.x, self.y), (self.x + self.width, self.y), 2)
-
         # Calculate the handle position based on the current_value
         proportion = (self.current_value - self.min_value) / (self.max_value - self.min_value)
         handle_x = self.x + proportion * (self.width - self.handle_width) + self.radius
 
-        # Draw the handle as a circle
-        pygame.draw.circle(screen, self.handle_color, (int(handle_x), self.y), self.radius)
+        line_thickness = 3  # Adjust for desired thickness
+        line_alpha = 100  # 78% transparency (adjust this as needed)
 
+        # Drawing the left segment of the line with the same color as the handle
+        pygame.draw.line(screen, self.handle_color + (line_alpha,),
+                         (self.x, self.y), (handle_x - self.radius, self.y),
+                         line_thickness)
+        # Drawing the right segment of the line with the original color
+        pygame.draw.line(screen, self.track_color + (line_alpha,),
+                         (handle_x + self.radius, self.y), (self.x + self.width, self.y),
+                         line_thickness)
+
+        # Create the transparent handle
+        circle_surface = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(circle_surface, self.handle_color + (100,),
+                           (self.radius, self.radius), self.radius)
+        screen.blit(circle_surface, (int(handle_x) - self.radius, self.y - self.radius))
+
+        # Draw the semi-transparent text
         text = self.font.render('Time Slider', True, WHITE)
-        screen.blit(text, (self.x + self.width - text.get_width(), self.y - self.height - text.get_height()))
+        text_surface = pygame.Surface((text.get_width(), text.get_height()), pygame.SRCALPHA)
+        text_surface.blit(text, (0, 0))
+        text_surface.set_alpha(100)
+        screen.blit(text_surface, (self.x + self.width - text.get_width(),
+                                   self.y - self.radius * 2 - text.get_height()))
 
     def handle_events(self, event, is_locked=False):
         proportion = (self.current_value - self.min_value) / (self.max_value - self.min_value)

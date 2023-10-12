@@ -47,7 +47,7 @@ class Graph(UIElement, Observer, Observable):
     def __init__(self, is_live=False, data_file=None, column='Price',
                  size_multiplier=1.0, y_offset_percentage=0.6,
                  x=None, y=None, width=None, height=None, color=(0, 0, 255),
-                 title='', original_title='', strategy_active=False, strategy_name='Strategy', prof_coloring=False, bar_chart=False, grid=True):
+                 title='', original_title='', strategy_active=False, strategy_name='Strategy', prof_coloring=False, bar_chart=0, grid=True, font=None):
         """
         Initialize a Graph instance.
 
@@ -151,6 +151,8 @@ class Graph(UIElement, Observer, Observable):
 
         self.setup_grid(grid)
 
+        self.font = font
+
 
     def setup_grid(self, grid):
         self.grid_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
@@ -159,7 +161,8 @@ class Graph(UIElement, Observer, Observable):
 
         if self.grid:
             self._draw_grid_on_surface()
-            self.create_toggle_buttons()
+
+        self.create_toggle_buttons()
 
 
     def create_toggle_buttons(self):
@@ -172,7 +175,7 @@ class Graph(UIElement, Observer, Observable):
 
     def _create_button(self, x_pos, label, action):
         """Helper function to create a button."""
-        return TextButton(x_pos, self.y - 29, label, pygame.font.SysFont(None, 24), (255, 255, 255), action, alpha=100)
+        return TextButton(x_pos, self.y - 29, label, pygame.font.SysFont('arial', 16), (255, 255, 255), action, alpha=100)
 
     def _draw_grid_on_surface(self):
         """Draws the transparent grid onto self.grid_surface."""
@@ -203,8 +206,12 @@ class Graph(UIElement, Observer, Observable):
                                                                   self.toggle_button_grid.color)
 
     def toggle_bar(self):
-        self.bar_chart = not self.bar_chart
-        if self.bar_chart:
+        self.bar_chart += 1
+        if self.bar_chart == 3:
+            self.bar_chart = 0
+        if self.bar_chart ==  2:
+            self.toggle_button_chart.text = "Basic"
+        elif self.bar_chart == 1:
             self.toggle_button_chart.text = "Candle"
         else:
             self.toggle_button_chart.text = "Line"
@@ -265,26 +272,17 @@ class Graph(UIElement, Observer, Observable):
             text_surf = font.render(text, True, color).convert_alpha()
             text_surf.fill((255, 255, 255, alpha), None, pygame.BLEND_RGBA_MULT)
             surface.blit(text_surf, position)
-
-
-
         alpha_value = 128
-        # print(self.highlight_index)
-
-        # print(self.display_range)
-        # print(id(self), 'DISPLAYING')
-        # Draw the rectangle boundary of the graph
         pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, self.width, self.height), 2)
-        font = pygame.font.SysFont(None, 24)
 
-        # Plot data if df exists
+
         if self.df is not None:
             start_idx, end_idx = self.display_range
-            # print(start_idx, end_idx)
             displayed_data = self.df.iloc[start_idx:end_idx + 1]
 
             max_val = displayed_data[self.column].max()
             min_val = displayed_data[self.column].min()
+            denominator = max_val - min_val
             if max_val == min_val:
                 values_normalized = [0.5 for _ in displayed_data[self.column]]  # Middle of the graph
             else:
@@ -296,41 +294,44 @@ class Graph(UIElement, Observer, Observable):
             else:
                 mid_val = (max_val + min_val) / 2
 
-            if self.bar_chart:
-                # Resample the displayed data for 5-minute OHLC bars
+            if self.bar_chart == 0:
                 ohlc_data = displayed_data.resample('5T').agg({
                     self.column: ['first', 'max', 'min', 'last']
                 })
                 ohlc_data.columns = ['Open', 'High', 'Low', 'Close']
-                ohlc_data.dropna(inplace=True)  # drop any empty intervals
+                ohlc_data.dropna(inplace=True)
 
-                bar_width = max(1, self.width / len(ohlc_data) - 2)
+                candle_width = max(1, self.width / len(ohlc_data) - 2)
 
-                # Inside the loop where you're iterating over the OHLC data:
                 for idx, (timestamp, row) in enumerate(ohlc_data.iterrows()):
                     x_pos = self.x + (self.width / (len(ohlc_data) - 1) * idx)
-
                     y_open = self.y + self.height - (self.height * (row['Open'] - min_val) / (max_val - min_val))
                     y_high = self.y + self.height - (self.height * (row['High'] - min_val) / (max_val - min_val))
                     y_low = self.y + self.height - (self.height * (row['Low'] - min_val) / (max_val - min_val))
                     y_close = self.y + self.height - (self.height * (row['Close'] - min_val) / (max_val - min_val))
 
-                    # Determine color
                     if self.prof_coloring:
-                        current_color = (0, 255, 0) if row['Close'] >= row['Open'] else (255, 0, 0)
+                        lookback_period = 5
+                        # Ensure you don't get an index out of range and then check the logic.
+                        if idx - lookback_period >= 0 and ohlc_data['Close'].iloc[idx] > ohlc_data['Close'].iloc[
+                            idx - lookback_period]:
+                            current_color = (0, 255, 0)  # green for up
+                        else:
+                            current_color = (255, 0, 0)  # red for down
                     else:
                         current_color = self.color
 
-                    # Draw vertical line from Low to High
+                    # Draw the wick from Low to High
                     pygame.draw.line(screen, current_color, (int(x_pos), int(y_low)), (int(x_pos), int(y_high)), 1)
 
-                    # Draw a rectangle for the Open and Close prices.
+                    # Draw the body of the candlestick
                     if row['Close'] >= row['Open']:
-                        pygame.draw.rect(screen, current_color,
-                                         (int(x_pos - bar_width / 2), int(y_open), bar_width, int(y_close - y_open)))
+                        pygame.draw.rect(screen, current_color, (
+                            int(x_pos - candle_width / 2), int(y_open), candle_width, int(y_close - y_open)))
                     else:
-                        pygame.draw.rect(screen, current_color,
-                                         (int(x_pos - bar_width / 2), int(y_close), bar_width, int(y_open - y_close)))
+                        pygame.draw.rect(screen, current_color, (
+                            int(x_pos - candle_width / 2), int(y_close), candle_width, int(y_open - y_close)))
+
 
             # Define y positions for text
             y_pos_max = self.y + 5  # 5 pixels from the top edge of the graph
@@ -338,9 +339,9 @@ class Graph(UIElement, Observer, Observable):
             y_pos_min = self.y + self.height - 25  # 25 pixels from the bottom edge to account for text height
 
             # Render the text
-            text_max = font.render(f"{max_val:.2f}", True, self.label_color)
-            text_mid = font.render(f"{mid_val:.2f}", True, self.label_color)
-            text_min = font.render(f"{min_val:.2f}", True, self.label_color)
+            text_max = self.font.render(f"{max_val:.2f}", True, self.label_color)
+            text_mid = self.font.render(f"{mid_val:.2f}", True, self.label_color)
+            text_min = self.font.render(f"{min_val:.2f}", True, self.label_color)
 
             padding = 10  # distance from the right edge of the graph
             x_pos_text = self.x + self.width + padding
@@ -362,13 +363,55 @@ class Graph(UIElement, Observer, Observable):
             # Displaying time values on the X-axis at the determined intervals
             for idx in range(0, len(time_values), interval_step):
                 x_pos = self.x + (self.width / (len(displayed_data) - 1) * idx)
-                time_text = font.render(time_values[idx], True, self.label_color)
-                render_transparent_text(screen, time_values[idx], font, self.label_color,
+                time_text = self.font.render(time_values[idx], True, self.label_color)
+                render_transparent_text(screen, time_values[idx], self.font, self.label_color,
                                         (x_pos - time_text.get_width() / 2, self.y + self.height + 5), alpha_value)
 
             prev_x_pos = None
             prev_y_pos = None
-            if not self.bar_chart:
+
+            if self.bar_chart == 1:
+                ohlc_data = displayed_data.resample('5T').agg({self.column: ['first', 'max', 'min', 'last']})
+                ohlc_data.columns = ['Open', 'High', 'Low', 'Close']
+                ohlc_data.dropna(inplace=True)
+
+                bar_width = max(1, self.width / len(ohlc_data) - 2)
+                width_ratio = self.width / (len(ohlc_data) - 1)
+
+                transparency = 128  # Adjust as needed. 0 is fully transparent, 255 is opaque.
+
+                for idx, (_, row) in enumerate(ohlc_data.iterrows()):
+                    x_pos = self.x + width_ratio * idx
+                    y_values = [
+                        self.y + self.height - (self.height * (row[key] - min_val) / denominator)
+                        for key in ['Open', 'High', 'Low', 'Close']
+                    ]
+
+                    if self.prof_coloring:
+                        lookback_period = 5  # Adjust as needed.
+
+                        # Ensure you don't get an index out of range and then check the logic.
+                        if idx - lookback_period >= 0 and ohlc_data['Close'].iloc[idx] > ohlc_data['Close'].iloc[
+                            idx - lookback_period]:
+                            current_color = (0, 255, 0)  # green for up
+                        else:
+                            current_color = (255, 0, 0)  # red for down
+                    else:
+                        current_color = self.color
+
+                    # Draw vertical line from Low to High
+                    pygame.draw.line(screen, current_color, (int(x_pos), int(y_values[2])),
+                                     (int(x_pos), int(y_values[1])), 1)
+
+                    # Drawing a transparent rectangle for the Open and Close prices
+                    temp_surface = pygame.Surface((bar_width, abs(y_values[0] - y_values[3])))
+                    temp_surface.fill(current_color)
+                    temp_surface.set_alpha(transparency)
+
+                    # Adjust positioning based on the Open and Close values
+                    rect_y = min(y_values[0], y_values[3])
+                    screen.blit(temp_surface, (int(x_pos - bar_width / 2), int(rect_y)))
+            if self.bar_chart == 2:
                 for idx, value in enumerate(values_normalized):
                     relative_idx = idx
 
@@ -415,12 +458,12 @@ class Graph(UIElement, Observer, Observable):
                 value = self.df[self.column].iloc[self.highlight_index]
                 value_normalized = (value - min_val) / (max_val - min_val)
                 y_pos = self.y + self.height - (self.height * value_normalized)
-                pygame.draw.circle(screen, (0, 0, 0), (int(x_pos), int(y_pos)), self.point_radius)
+                pygame.draw.circle(screen, (255, 255, 255), (int(x_pos), int(y_pos)), self.point_radius * 1.2)
 
         self.rect = pygame.Rect(self.x - 5, self.y - 5, self.width + 10, self.height + 10)
 
         # Display the original title for the graph
-        title_surf = font.render(self.original_title, True, self.color)
+        title_surf = self.font.render(self.original_title, True, self.color)
         screen.blit(title_surf, (self.x, self.y - 30))
 
         strategy = Strategy()  # Initialize your strategy instance
@@ -436,7 +479,7 @@ class Graph(UIElement, Observer, Observable):
                     pygame.draw.circle(screen, color, (int(x_pos), int(y_pos)), self.point_radius)
 
                 if label:
-                    label_surface = pygame.font.SysFont(None, 24).render(label, True, color)
+                    label_surface = self.font.render(label, True, color)
                     label_width = label_surface.get_width()
                     label_height = label_surface.get_height()
 
@@ -492,6 +535,7 @@ class Graph(UIElement, Observer, Observable):
 
                 self.ohlc_data.columns = ['Open', 'High', 'Low', 'Close']
                 self.ohlc_data.dropna(inplace=True)  # drop any empty intervals
+
             else:
                 print(f"Warning: Data file {new_path} is empty.")
         except FileNotFoundError:
@@ -604,7 +648,8 @@ class Graph(UIElement, Observer, Observable):
             strategy_name=data['strategy_name'],
             grid=data['is_grid'],
             prof_coloring=data['is_prof'],
-            bar_chart=data['is_bar']
+            bar_chart=data['is_bar'],
+            font=pygame.font.SysFont('arial', 14)
         )
 
 

@@ -1,60 +1,54 @@
 import pygame
 from utils.uiux import UIElement
+
 class MenuButton(UIElement):
-    """
-    A class representing a button with a label in a Pygame screen.
 
-    Attributes:
-        x (int): The x-coordinate of the button's top left corner.
-        y (int): The y-coordinate of the button's top left corner.
-        width (int): The width of the button.
-        height (int): The height of the button.
-        text (str): The label text for the button. Default is "Menu".
-        font (pygame.font.Font): The font used for rendering the button's text.
-        rect (pygame.Rect): The rectangle object representing the button's position and size.
-
-    Methods:
-        display(screen): Displays the button on the given Pygame screen.
-        update_position(dx, dy): Updates the button's position by a given delta.
-        serialize(): Returns a dictionary containing the serialized state of the button.
-
-    Example:
-        button = MenuButton(10, 10, 100, 50, "Start")
-        button.display(screen)
-    """
     def __init__(self, x, y, width, height, text="Menu"):
-        """
-        Initialize a MenuButton instance.
-
-        Args:
-            x (int): The x-coordinate of the button's top left corner.
-            y (int): The y-coordinate of the button's top left corner.
-            width (int): The width of the button.
-            height (int): The height of the button.
-            text (str, optional): The label text for the button. Default is "Menu".
-        """
         super().__init__(x, y)
         self.width, self.height = width, height
         self.text = text
-        self.font = pygame.font.Font(None, 36)
+        self.font = pygame.font.SysFont('Arial', 16)
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.active_color = (60, 60, 60)  # Slightly brighter color for hover/click
+        self.passive_color = (100, 100, 100)  # Default color
+        self.color = self.passive_color  # Current color
 
     def display(self, screen):
-        """
-        Display the button on a Pygame screen.
+        # Create a new surface for the button with alpha transparency
+        button_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
 
-        Args:
-            screen (pygame.Surface): The Pygame surface where the button will be displayed.
-        """
-        pygame.draw.rect(screen, (100, 100, 100), self.rect)  # Drawing a gray button
+        # Draw the button background onto the button_surface with desired transparency
+        pygame.draw.rect(button_surface, self.color + (128,), (0, 5, self.rect.width, self.rect.height - 10))
+        pygame.draw.rect(button_surface, self.color + (128,), (5, 0, self.rect.width - 10, self.rect.height))
+        pygame.draw.circle(button_surface, self.color + (128,), (5, 5), 5)
+        pygame.draw.circle(button_surface, self.color + (128,), (self.rect.width - 5, 5), 5)
+        pygame.draw.circle(button_surface, self.color + (128,), (5, self.rect.height - 5), 5)
+        pygame.draw.circle(button_surface, self.color + (128,), (self.rect.width - 5, self.rect.height - 5), 5)
 
-        text_surf = self.font.render(self.text, True, (0, 0, 0))  # Black text
+        # Render the text with white color
+        text_surf = self.font.render(self.text, True, (255, 255, 255))
+        text_x = (self.rect.width - text_surf.get_width()) // 2
+        text_y = (self.rect.height - text_surf.get_height()) // 2
+        button_surface.blit(text_surf, (text_x, text_y))
 
-        # Compute position relative to the rect's position
-        text_x = self.rect.x + (self.rect.width - text_surf.get_width()) // 2
-        text_y = self.rect.y + (self.rect.height - text_surf.get_height()) // 2
+        # Blit the transparent button surface onto the main screen
+        screen.blit(button_surface, (self.rect.x, self.rect.y))
 
-        screen.blit(text_surf, (text_x, text_y))
+    def handle_events(self, event):
+        if self.rect.collidepoint(pygame.mouse.get_pos()):
+            self.color = self.active_color
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # Add functionality for the button when clicked
+                pass
+        else:
+            self.color = self.passive_color
+
+
+    def hover(self):
+        if self.rect.collidepoint(pygame.mouse.get_pos()):
+            self.color = self.active_color
+        else:
+            self.color = self.passive_color
 
     def update_position(self, dx, dy):
         """

@@ -9,17 +9,17 @@ from analysis.slider import Slider
 from analysis.table import DataTable
 from core.dayswitch import DaySwitch
 from analysis.range_slider import RangeSlider
-
+import cProfile
 
 class Application:
 
-    def __init__(self):
+    def __init__(self, num_vals_table):
         pygame.init()
         self.WIDTH, self.HEIGHT = 800, 600
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT), pygame.RESIZABLE)
         pygame.display.set_caption("Resizable Window with Clock and Graphs")
         self.GLOBAL_LOCK = False
-        self.initialize_projections('strategy_zero')
+        self.initialize_projections('strategy_zero', num_vals_table)
 
         self.background_color = (10, 25, 50)
 
@@ -65,19 +65,22 @@ class Application:
             self.day_switch = loaded_day_switch
 
         self.graphs = loaded_graphs
-    def initialize_projections(self, strategy_dir):
+    def initialize_projections(self, strategy_dir, num_vals_table):
+        font_graph_name = 'arial'
+        font_graph_size = 14
+        font_graph = pygame.font.SysFont(font_graph_name, font_graph_size)
         object_configs = [
             {"class": Clock, "args": (10, 10, 100, 50),
              "kwargs": {"text_color": "black", "border_color": "black", "bg_color": "darkGray"}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price1',
-                        "size_multiplier": 1.5, "color": (255, 0, 0), "title": "Graph 1", "original_title": "Graph 1", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True}},
+                        "size_multiplier": 1.5, "color": (255, 255, 255), "title": "Graph 1", "original_title": "Graph 1", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True, 'font': font_graph}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price2',
-                        "size_multiplier": .9, "color": (0, 255, 0), "title": "Graph 2", "original_title": "Graph 2", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True}},
+                        "size_multiplier": .9, "color": (255, 153, 51), "title": "Graph 2", "original_title": "Graph 2", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True, 'font': font_graph}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price3',
-                        "size_multiplier": .9, "color": (0, 0, 255), "title": "Graph 3", "original_title": "Graph 3", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True}}
+                        "size_multiplier": .9, "color": (0, 0, 255), "title": "Graph 3", "original_title": "Graph 3", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True, 'font': font_graph}}
         ]
 
         self.projections = [config["class"](*config.get("args", ()), **config["kwargs"]) for config in object_configs]
@@ -85,11 +88,13 @@ class Application:
         self.graphs = [proj for proj in self.projections if isinstance(proj, Graph)]
         max_length = max([len(graph.df) for graph in self.graphs if graph.df is not None], default=100)
 
-        self.slider = Slider(50, 450, 700, 0, max_length - 1)
+        self.slider = Slider(50, 450, 350, 0, max_length - 1)
         self.projections.append(self.slider)
 
-        font = pygame.font.SysFont(None, 24)
-        self.data_table = DataTable(650, 50, self.graphs, font)
+        font_name = "arial"
+        font_size = 14
+        font = pygame.font.SysFont(font_name, font_size)
+        self.data_table = DataTable(650, 50, self.graphs, font, visible_rows=num_vals_table)
         self.projections.append(self.data_table)
 
         self.slider.add_observer(self.data_table)
@@ -101,7 +106,7 @@ class Application:
         self.day_switch = DaySwitch(650, 10, graphs=self.graphs, strategy_dir=strategy_dir)
         self.projections.append(self.day_switch)
 
-        self.range_slider = RangeSlider(50, 500, 700, 0, max_length - 1)  # Assuming a suitable position and width
+        self.range_slider = RangeSlider(50, 500, 350, 0, max_length - 1)  # Assuming a suitable position and width
         self.projections.append(self.range_slider)
 
 
@@ -184,7 +189,56 @@ class Application:
             if func:
                 func()
 
-    # ... other methods ...
+    def run_for_duration(self, duration):
+        """Run the main loop for a specified duration in seconds."""
+        end_time = pygame.time.get_ticks() + duration * 1000  # Convert to milliseconds
+        while pygame.time.get_ticks() < end_time:
+            self._main_loop_iteration()
+
+    def _main_loop_iteration(self):
+        """One iteration of the main loop."""
+        for event in pygame.event.get():
+            for graph in self.graphs:
+                graph.toggle_button_grid.handle_event(event)
+                graph.toggle_button_chart.handle_event(event)
+                graph.toggle_button_strategy.handle_event(event)
+                graph.toggle_button_color.handle_event(event)
+
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.VIDEORESIZE:
+                self.handle_video_resize(event)
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                self.handle_mouse_down(event)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                self.handle_mouse_up()
+            elif event.type == pygame.MOUSEMOTION and self.dragging:
+                self.handle_mouse_motion(event, self.GLOBAL_LOCK)
+            elif event.type == pygame.KEYDOWN and self.dragged_object:
+                self.handle_key_down(event)
+
+            # Event handling for slider
+            for proj in self.projections:
+                if isinstance(proj, Slider):
+                    proj.handle_events(event, self.GLOBAL_LOCK)
+                if isinstance(proj, RangeSlider):
+                    proj.handle_events(event, self.GLOBAL_LOCK)
+
+        self.screen.fill(self.background_color)
+        for proj in self.projections:
+            if isinstance(proj, Graph):
+                proj.display(self.screen, self.graphs)
+                proj.toggle_button_grid.display(self.screen)
+                proj.toggle_button_chart.display(self.screen)
+                proj.toggle_button_strategy.display(self.screen)
+                proj.toggle_button_color.display(self.screen)
+            elif not isinstance(proj, (Menu, MenuButton)):
+                proj.display(self.screen)
+        self.menu_button.display(self.screen)
+        self.menu.display(self.screen)
+        pygame.display.flip()
+
+    # ... [End of your Application class] ...
 
     def run(self):
         running = True
@@ -218,6 +272,7 @@ class Application:
                     if isinstance(proj, RangeSlider):
                         proj.handle_events(event, self.GLOBAL_LOCK)
 
+            self.menu_button.hover()
             # Display logic
             self.screen.fill(self.background_color)
             for proj in self.projections:
@@ -239,6 +294,10 @@ class Application:
 
         pygame.quit()
 
+
 if __name__ == "__main__":
+    # cProfile.run('app = Application(); app.run_for_duration(10)', 'profiling_results.out')
     app = Application()
     app.run()
+
+

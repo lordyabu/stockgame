@@ -3,44 +3,68 @@ from utils.observer_pattern import Observable
 import pygame
 import os
 from core.graph import Graph
-
+import pandas as pd
 
 class DaySwitch(UIElement, Observable):
-    def __init__(self, x, y, graphs=[], max_days=99, strategy_dir='strategy_zero'):
+    def __init__(self, x, y, graphs=[], max_days=99, strategy_dir='strategy_zero', show_date=True):
         super().__init__(x, y)
+        self.show_date = show_date
         self.max_days = max_days
         self.current_day = 1
-        self.font = pygame.font.SysFont(None, 24)
+        self.font = pygame.font.SysFont('arial', 32)  # Increased the font size
 
-        self.arrow_size = 20
-        self.padding = 10
+        self.arrow_size = 40  # Increased from 20 to 80
+        self.padding = 40  # Increased from 10 to 40
 
         self.graphs = graphs
 
-        # Define clickable areas
-        self.left_arrow_rect = pygame.Rect(x, y, self.arrow_size, self.arrow_size)
-        self.right_arrow_rect = pygame.Rect(x + 2 * self.padding + self.arrow_size, y, self.arrow_size, self.arrow_size)
+        # Define clickable areas based on new dimensions
+        self.left_arrow_rect = pygame.Rect(x, y + self.font.get_height(), self.arrow_size, self.arrow_size)
+        self.right_arrow_rect = pygame.Rect(x + 2 * self.padding + self.arrow_size, y + self.font.get_height(), self.arrow_size, self.arrow_size)
 
         # Define bounding rect for the entire DaySwitch
         total_width = self.arrow_size + 2 * self.padding + self.arrow_size + self.font.size(f"Day {self.max_days}")[0]
-        self.rect = pygame.Rect(self.x, self.y, total_width, self.arrow_size)
+        total_height = self.arrow_size + self.font.get_height()
+        self.rect = pygame.Rect(self.x, self.y, total_width, total_height)
 
         self.strategy_dir = strategy_dir
+        self.show_date = show_date  # New variable
 
     def display(self, screen):
-        pygame.draw.polygon(screen, (0, 0, 0), [(self.left_arrow_rect.x + self.arrow_size, self.left_arrow_rect.y),
-                                                (self.left_arrow_rect.x, self.left_arrow_rect.centery),
-                                                (self.left_arrow_rect.x + self.arrow_size,
-                                                 self.left_arrow_rect.y + self.arrow_size)])
+        # Create a separate surface for arrows
+        arrow_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
 
-        pygame.draw.polygon(screen, (0, 0, 0), [(self.right_arrow_rect.x, self.right_arrow_rect.y),
-                                                (self.right_arrow_rect.x + self.arrow_size,
-                                                 self.right_arrow_rect.centery),
-                                                (self.right_arrow_rect.x, self.right_arrow_rect.y + self.arrow_size)])
+        # Draw left arrow (shaped like a mouse pointer facing left) using transparent color
+        pygame.draw.polygon(arrow_surface, (0, 0, 0, 128),  # RGBA
+                            [(self.left_arrow_rect.x + self.arrow_size - self.x, self.left_arrow_rect.y - self.y),
+                             (self.left_arrow_rect.x - self.x, self.left_arrow_rect.y + self.arrow_size // 2 - self.y),
+                             (self.left_arrow_rect.x + self.arrow_size - self.x,
+                              self.left_arrow_rect.y + self.arrow_size - self.y)])
 
-        day_text = self.font.render(f"Day{self.current_day}", True, (0, 0, 0))
-        screen.blit(day_text, (self.x + self.padding + self.arrow_size, self.y))
+        # Draw right arrow (shaped like a mouse pointer facing right) using transparent color
+        pygame.draw.polygon(arrow_surface, (0, 0, 0, 128),  # RGBA
+                            [(self.right_arrow_rect.x - self.x, self.right_arrow_rect.y - self.y),
+                             (self.right_arrow_rect.x + self.arrow_size - self.x,
+                              self.right_arrow_rect.y + self.arrow_size // 2 - self.y),
+                             (self.right_arrow_rect.x - self.x, self.right_arrow_rect.y + self.arrow_size - self.y)])
 
+        # Blit arrow surface to main screen
+        screen.blit(arrow_surface, (self.x, self.y))
+
+        # Render the text directly onto the main screen (opaque)
+        if hasattr(self, 'show_date') and self.show_date and self.graphs:
+            df = pd.read_csv(self.graphs[0].df_path)
+            day_str = str(df.iloc[0]["DateTime"].split(' ')[0])
+        else:
+            day_str = f"Day {self.current_day}"
+
+        day_text = self.font.render(day_str, True, (0, 0, 0))  # RGB for opaque black text
+
+        # Calculate the midpoint between the arrows and blit the text
+        arrow_midpoint = self.left_arrow_rect.right + (self.right_arrow_rect.left - self.left_arrow_rect.right) / 2
+        text_x = arrow_midpoint - day_text.get_width() // 2
+        text_y = self.y + self.arrow_size + self.padding  # Below the arrows
+        screen.blit(day_text, (text_x, text_y))
 
     def clear_graphs(self):
         self.graphs = []
@@ -50,7 +74,6 @@ class DaySwitch(UIElement, Observable):
 
 
     def check_click(self, pos):
-        # print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACV')
         if self.left_arrow_rect.collidepoint(pos):
             self._move_day(-1)
         elif self.right_arrow_rect.collidepoint(pos):
@@ -87,7 +110,7 @@ class DaySwitch(UIElement, Observable):
             'y': self.y,
             'current_day': self.current_day,
             'max_days': self.max_days,
-            'strategy_dir': self.strategy_dir
+            'strategy_dir': self.strategy_dir,
         }
         return data
 

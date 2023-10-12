@@ -1,11 +1,13 @@
-# import pandas as pd
+import pandas as pd
 # import numpy as np
 #
-# df_name = './Day1/PriceDay1.csv'
+# df_name = './strategy_zero/Day3.csv'
 # df_name1 = './Day1/PriceDay2.csv'
 # df_name2 = './Day1/PriceDay3.csv'
 #
 # df = pd.read_csv(df_name, index_col=[0])
+
+# df['DateTime'] = df['DateTime'].iloc[::-1].values
 # df1 = pd.read_csv(df_name1, index_col=[0])
 # df2 = pd.read_csv(df_name2, index_col=[0])
 #
@@ -15,10 +17,10 @@
 #
 # df['Price1'] = df['Price'].values
 # df['Price2'] = df1['Price'].values
-# df['Price3'] = df2['Price'].values
+# df['Price3'] = df2['Price'].values3
 #
 #
-# df.to_csv('Day1.csv')
+# df.to_csv('./strategy_zero/Day3.csv')
 #
 # print(df['Price1'].iloc[11])
 # print(df['Price2'].iloc[11])

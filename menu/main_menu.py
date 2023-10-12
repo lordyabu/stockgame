@@ -43,7 +43,11 @@ class Menu(UIElement):
         """
         if not self.is_active:
             return
-        pygame.draw.rect(screen, (200, 200, 200), self.rect)
+        # Create a transparent surface for the menu
+        menu_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+
+        # Draw the semi-transparent background of the menu on the transparent surface
+        pygame.draw.rect(menu_surface, (200, 200, 200, 50), (0, 0, self.rect.width, self.rect.height))
         self.lock_button.display(screen)
         self.save_button.display(screen)
         self.load_button.display(screen)

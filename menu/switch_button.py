@@ -37,6 +37,7 @@ class SwitchButton(UIElement):
         self.is_on = False  # By default, it's off
         self.text_on = text_on
         self.text_off = text_off
+        self.font = pygame.font.SysFont('arial', 16)
 
     def toggle(self):
         """
@@ -56,11 +57,26 @@ class SwitchButton(UIElement):
             screen (pygame.Surface): The Pygame surface where the button will be displayed.
         """
         color = (100, 255, 100) if self.is_on else (255, 100, 100)  # Green if on, red if off
-        pygame.draw.rect(screen, color, self.rect)
-        font = pygame.font.Font(None, 36)
-        text = self.text_on if self.is_on else self.text_off
-        text_surface = font.render(text, True, (0, 0, 0))
-        screen.blit(text_surface, (self.rect.x + 10, self.rect.y + 10))
+
+        # Create a new surface for the button with alpha transparency
+        button_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+
+        # Draw the button background onto the button_surface with desired transparency
+        pygame.draw.rect(button_surface, color + (128,), (0, 5, self.rect.width, self.rect.height - 10))
+        pygame.draw.rect(button_surface, color + (128,), (5, 0, self.rect.width - 10, self.rect.height))
+        pygame.draw.circle(button_surface, color + (128,), (5, 5), 5)
+        pygame.draw.circle(button_surface, color + (128,), (self.rect.width - 5, 5), 5)
+        pygame.draw.circle(button_surface, color + (128,), (5, self.rect.height - 5), 5)
+        pygame.draw.circle(button_surface, color + (128,), (self.rect.width - 5, self.rect.height - 5), 5)
+
+        # Render the text with black color
+        text_surface = self.font.render(self.text_on if self.is_on else self.text_off, True, (0, 0, 0))
+        text_x = (self.rect.width - text_surface.get_width()) // 2
+        text_y = (self.rect.height - text_surface.get_height()) // 2
+        button_surface.blit(text_surface, (text_x, text_y))
+
+        # Blit the transparent button surface onto the main screen
+        screen.blit(button_surface, (self.rect.x, self.rect.y))
 
     def serialize(self):
         data = super().serialize()  # Get base class serialization data

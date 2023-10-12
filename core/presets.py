@@ -55,7 +55,7 @@ def load_preset(filename='presets/preset.json', font=None):
             projections.append(loaded_range_slider)
 
     if font is None:
-        font = pygame.font.SysFont(None, 24)  # Or any default you'd like
+        font = pygame.font.SysFont('arial', 14)  # Or any default you'd like
 
     loaded_data_table = next((DataTable.deserialize(proj_data, loaded_graphs, font) for proj_data in data if proj_data['type'] == 'DataTable'), None)
     if loaded_data_table:
