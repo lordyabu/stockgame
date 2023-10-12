@@ -25,7 +25,7 @@ python main.py --num-vars-table 25 # Adjust the `--num-vars-table` parameter bas
 
 **Presets**:
 - Save and load presets
-![output_preset](https://github.com/lordyabu/stockgame/assets/92772420/4ad19ac6-80ae-4209-ae8e-4e4af8551be7)
+![output_preset](https://github.com/lordyabu/stockgame/assets/92772420/87339d35-6102-4654-bc82-fc82d31307c7)
 
 **Graphs**: 
 - Manipulate and customize the graph visualizations according to your preference.
