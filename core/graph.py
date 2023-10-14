@@ -211,7 +211,7 @@ class Graph(UIElement, Observer, Observable):
         """
         self.toggle_button_grid = self._create_button(self.x + 75, "Grid On", self.toggle_grid)
         self.toggle_button_chart = self._create_button(self.x + 150, "Candle", self.toggle_bar)
-        self.toggle_button_strategy = self._create_button(self.x + 225, "Indicators On", self.toggle_strategy)
+        self.toggle_button_strategy = self._create_button(self.x + 225, "Indicators Off", self.toggle_strategy)
         self.toggle_button_color = self._create_button(self.x + 350, "RG Color", self.toggle_color)
 
 
@@ -795,7 +795,6 @@ class Graph(UIElement, Observer, Observable):
         """
 
         # Construct the default data_file path with 'Day1' and the data_filename.
-        default_day = "Day1"
         data_filename = data.get('data_file', '')
         constructed_data_file = data_filename
 

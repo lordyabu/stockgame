@@ -75,6 +75,8 @@ class Slider(UIElement, Observable):
         screen : pygame.Surface
             The Pygame screen where the slider should be displayed.
         """
+
+        WHITE = (255, 255, 255)
         # Calculate the handle position based on the current_value
         proportion = (self.current_value - self.min_value) / (self.max_value - self.min_value)
         handle_x = self.x + proportion * (self.width - self.handle_width) + self.radius

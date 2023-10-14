@@ -46,6 +46,8 @@ class RangeSlider(UIElement, Observable):
         super().__init__(x, y)
         Observable.__init__(self)
 
+
+
         self.width = width
         self.height = 20
         self.rect = pygame.Rect(x, y, self.width, self.height)
@@ -79,6 +81,8 @@ class RangeSlider(UIElement, Observable):
         screen : pygame.Surface
             The Pygame screen to render the slider on.
         """
+
+        WHITE = (255, 255, 255)
         start_handle_x = self.rect.x + (self.start_value - self.min_value) / (
                     self.max_value - self.min_value) * self.width
         end_handle_x = self.rect.x + (self.end_value - self.min_value) / (self.max_value - self.min_value) * self.width

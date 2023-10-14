@@ -1,10 +1,9 @@
 A dynamic application to visualize and interact with stock-related information.
 
 ## Requirements
-- `pandas`
-- `numpy`
-- `pygame`
-
+```python
+pip install -r requirements.txt
+```
 ## Installation
 
 1. Clone the repository:

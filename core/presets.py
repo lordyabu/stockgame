@@ -4,6 +4,8 @@ from core.graph import Graph
 from menu.main_menu import Menu
 from menu.menu_button import MenuButton
 from analysis.slider import Slider
+from analysis.range_slider import RangeSlider
+from core.clock import Clock
 from analysis.table import DataTable
 from core.dayswitch import DaySwitch
 import os
@@ -55,6 +57,7 @@ def load_preset(filename='presets/preset.json', font=None):
         elif proj_data['type'] == 'Slider':
             loaded_slider = Slider.deserialize(proj_data)
             projections.append(loaded_slider)
+
 
         elif proj_data['type'] in ['MenuButton', 'SwitchButton', 'Menu', 'Clock']:
             proj_class = globals().get(proj_data['type'])

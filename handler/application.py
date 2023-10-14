@@ -10,23 +10,31 @@ from analysis.table import DataTable
 from core.dayswitch import DaySwitch
 from analysis.range_slider import RangeSlider
 import cProfile
+from PIL import Image, ImageDraw
 
 class Application:
 
     def __init__(self, num_vals_table):
         pygame.init()
-        self.WIDTH, self.HEIGHT = 800, 600
-        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT), pygame.RESIZABLE)
+
+        # Set display to current screen resolution
+        self.WIDTH = pygame.display.Info().current_w
+        self.HEIGHT = pygame.display.Info().current_h
+
+        # Initialize in full-screen mode
+        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT), pygame.FULLSCREEN)
         pygame.display.set_caption("Resizable Window with Clock and Graphs")
+
         self.GLOBAL_LOCK = False
         self.initialize_projections('strategy_zero', num_vals_table)
 
         self.background_color = (10, 25, 50)
 
-
         self.dragging = False
         self.dragged_object = None
-        # ... more initialization stuff ...
+
+        self.frames = []  # List to store frames for GIF
+        self.mouse_positions = []
 
 
     def load_saved_state(self):
@@ -74,13 +82,13 @@ class Application:
              "kwargs": {"text_color": "black", "border_color": "black", "bg_color": "darkGray"}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price1',
-                        "size_multiplier": 1.5, "color": (255, 255, 255), "title": "Graph 1", "original_title": "Graph 1", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True, 'font': font_graph}},
+                        "size_multiplier": 1.5, "color": (100, 100, 100), "title": "Price 1", "original_title": "Price 1", "strategy_active": False, 'prof_coloring': False, 'bar_chart': 2, 'font': font_graph}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price2',
-                        "size_multiplier": .9, "color": (255, 153, 51), "title": "Graph 2", "original_title": "Graph 2", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True, 'font': font_graph}},
+                        "size_multiplier": .9, "color": (255, 153, 51), "title": "Price 2", "original_title": "Price 2", "strategy_active": False, 'prof_coloring': False, 'bar_chart': 2, 'font': font_graph}},
             {"class": Graph,
              "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price3',
-                        "size_multiplier": .9, "color": (0, 0, 255), "title": "Graph 3", "original_title": "Graph 3", "strategy_active": True, 'prof_coloring': True, 'bar_chart': True, 'font': font_graph}}
+                        "size_multiplier": .9, "color": (0, 0, 255), "title": "Price 3", "original_title": "Price 3", "strategy_active": False, 'prof_coloring': False, 'bar_chart': 2, 'font': font_graph}}
         ]
 
         self.projections = [config["class"](*config.get("args", ()), **config["kwargs"]) for config in object_configs]
@@ -195,6 +203,50 @@ class Application:
         while pygame.time.get_ticks() < end_time:
             self._main_loop_iteration()
 
+    def capture_frame(self):
+        """Capture the current Pygame screen frame."""
+
+        # Get the current size of the display
+        current_size = pygame.display.get_surface().get_size()
+        screen_size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
+
+        # If the sizes don't match (i.e., the screen was resized),
+        # temporarily set the display mode to the current screen size to capture the full screen
+        if current_size != screen_size:
+            temp_surface = pygame.display.set_mode(screen_size, pygame.FULLSCREEN)
+            self.screen.blit(temp_surface, (0, 0))
+
+        pygame_surface = pygame.display.get_surface()
+        image = Image.frombytes('RGB', pygame_surface.get_size(),
+                                pygame.image.tostring(pygame_surface, 'RGB'))
+        self.frames.append(image)
+
+        # Reset the display mode to the original size if it was changed
+        if current_size != screen_size:
+            pygame.display.set_mode(current_size)
+
+    def save_gif(self, filename, duration=100):
+        """Save the captured frames as a GIF with mouse pointers overlaid."""
+        if self.frames and len(self.frames) == len(self.mouse_positions):
+            # Modify frames with mouse position overlay
+            modified_frames = []
+            for frame, position in zip(self.frames, self.mouse_positions):
+                frame_copy = frame.copy()  # To ensure we don't modify the original frame
+                draw = ImageDraw.Draw(frame_copy)
+
+                draw_mouse_pointer(draw, position)
+
+                modified_frames.append(frame_copy)
+
+            modified_frames[0].save(filename, save_all=True, append_images=modified_frames[1:], optimize=False,
+                                    duration=duration, loop=0)
+
+
+    def record_mouse_position(self):
+        """Record the current mouse position."""
+        mouse_pos = pygame.mouse.get_pos()
+        self.mouse_positions.append(mouse_pos)
+
     def _main_loop_iteration(self):
         """One iteration of the main loop."""
         for event in pygame.event.get():
@@ -223,6 +275,11 @@ class Application:
                     proj.handle_events(event, self.GLOBAL_LOCK)
                 if isinstance(proj, RangeSlider):
                     proj.handle_events(event, self.GLOBAL_LOCK)
+
+            self.capture_frame()
+            self.record_mouse_position()
+
+            pygame.display.flip()
 
         self.screen.fill(self.background_color)
         for proj in self.projections:
@@ -295,9 +352,19 @@ class Application:
         pygame.quit()
 
 
+def draw_mouse_pointer(draw, position):
+    """Draw a simple arrow resembling a mouse pointer."""
+    x, y = position
+    pointer_color = 'white'
+
+    # Main triangle of the pointer
+    draw.polygon([(x, y), (x + 10, y + 15), (x + 15, y + 10)], fill=pointer_color)
+
+
 if __name__ == "__main__":
-    # cProfile.run('app = Application(); app.run_for_duration(10)', 'profiling_results.out')
-    app = Application()
-    app.run()
+    game = Application(49)
+    game.run_for_duration(60)  # Run for 5 seconds for example
+    game.save_gif('output.gif', duration=50)  # This will save a gif with each frame having a 100ms duration
+
 
 
