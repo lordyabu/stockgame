@@ -11,6 +11,9 @@ from core.dayswitch import DaySwitch
 from analysis.range_slider import RangeSlider
 import cProfile
 from PIL import Image, ImageDraw
+import config
+import sys
+
 
 class Application:
 
@@ -73,50 +76,40 @@ class Application:
             self.day_switch = loaded_day_switch
 
         self.graphs = loaded_graphs
+
     def initialize_projections(self, strategy_dir, num_vals_table):
-        font_graph_name = 'arial'
-        font_graph_size = 14
-        font_graph = pygame.font.SysFont(font_graph_name, font_graph_size)
-        object_configs = [
-            {"class": Clock, "args": (10, 10, 100, 50),
-             "kwargs": {"text_color": "black", "border_color": "black", "bg_color": "darkGray"}},
-            {"class": Graph,
-             "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price1',
-                        "size_multiplier": 1.5, "color": (100, 100, 100), "title": "Price 1", "original_title": "Price 1", "strategy_active": False, 'prof_coloring': False, 'bar_chart': 2, 'font': font_graph}},
-            {"class": Graph,
-             "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price2',
-                        "size_multiplier": .9, "color": (255, 153, 51), "title": "Price 2", "original_title": "Price 2", "strategy_active": False, 'prof_coloring': False, 'bar_chart': 2, 'font': font_graph}},
-            {"class": Graph,
-             "kwargs": {"is_live": False, "data_file": f'./data/{strategy_dir}/Day1.csv', "column": 'Price3',
-                        "size_multiplier": .9, "color": (0, 0, 255), "title": "Price 3", "original_title": "Price 3", "strategy_active": False, 'prof_coloring': False, 'bar_chart': 2, 'font': font_graph}}
-        ]
+        # Using configurations
+        font_graph = pygame.font.SysFont(config.font_graph_name, config.font_graph_size)
 
-        self.projections = [config["class"](*config.get("args", ()), **config["kwargs"]) for config in object_configs]
+        for conf in config.object_configs:
+            if conf["class_name"] == "Graph":
+                conf["kwargs"]["data_file"] = f'./data/{strategy_dir}/Day1.csv'
+                conf["kwargs"]["font"] = font_graph
 
-        self.graphs = [proj for proj in self.projections if isinstance(proj, Graph)]
+        self.projections = [eval(conf["class_name"])(*conf.get("args", ()), **conf["kwargs"]) for conf in
+                            config.object_configs]
+
+        self.graphs = [proj for proj in self.projections if
+                       isinstance(proj, eval(conf["class_name"]))]  # Using eval for dynamic class checking
         max_length = max([len(graph.df) for graph in self.graphs if graph.df is not None], default=100)
 
-        self.slider = Slider(50, 450, 350, 0, max_length - 1)
+        self.slider = Slider(*config.slider_position, config.slider_width, 0, max_length - 1)
         self.projections.append(self.slider)
 
-        font_name = "arial"
-        font_size = 14
-        font = pygame.font.SysFont(font_name, font_size)
-        self.data_table = DataTable(650, 50, self.graphs, font, visible_rows=num_vals_table)
+        font = pygame.font.SysFont(config.font_name, config.font_size)
+        self.data_table = DataTable(*config.data_table_position, self.graphs, font, visible_rows=num_vals_table)
         self.projections.append(self.data_table)
 
         self.slider.add_observer(self.data_table)
-
-        self.menu_button = MenuButton(700, 10, 80, 40, "Menu")
-        self.menu = Menu(700, 60)
+        self.menu_button = MenuButton(*config.menu_button_position, *config.menu_button_size, "Menu")
+        self.menu = Menu(*config.menu_position)
         self.projections.extend([self.menu_button, self.menu])
 
-        self.day_switch = DaySwitch(650, 10, graphs=self.graphs, strategy_dir=strategy_dir)
+        self.day_switch = DaySwitch(*config.day_switch_position, graphs=self.graphs, strategy_dir=strategy_dir)
         self.projections.append(self.day_switch)
 
-        self.range_slider = RangeSlider(50, 500, 350, 0, max_length - 1)  # Assuming a suitable position and width
+        self.range_slider = RangeSlider(*config.range_slider_position, config.slider_width, 0, max_length - 1)
         self.projections.append(self.range_slider)
-
 
         for graph in self.graphs:
             graph.add_observer(self.slider)
@@ -137,6 +130,8 @@ class Application:
             save_preset(self.projections)
         elif self.menu.load_button.rect.collidepoint(event.pos):
             self.load_saved_state()
+        elif self.menu.exit_button.rect.collidepoint(event.pos):
+            sys.exit()
         elif not self.GLOBAL_LOCK and not dragged_object:
             dragged_object = next((proj for proj in self.projections if
                                    proj.rect.collidepoint(event.pos) and hasattr(proj, 'update_position')), None)
@@ -363,8 +358,8 @@ def draw_mouse_pointer(draw, position):
 
 if __name__ == "__main__":
     game = Application(49)
-    game.run_for_duration(60)  # Run for 5 seconds for example
-    game.save_gif('output.gif', duration=50)  # This will save a gif with each frame having a 100ms duration
+    game.run_for_duration(10)  # Run for 5 seconds for example
+    game.save_gif('output_preset.gif', duration=50)  # This will save a gif with each frame having a 100ms duration
 
 
 

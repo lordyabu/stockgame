@@ -37,6 +37,8 @@ class Menu(UIElement):
         self.save_button = MenuButton(self.x + 10, self.y + 60, 80, 40, text="Save")
         self.load_button = MenuButton(self.x + 10, self.y + 110, 80, 40, text="Load")
 
+        self.exit_button = MenuButton(self.x + 10, self.y + 160, 80, 40, text="Exit")
+
     def update_position(self, x, y):
         """
         Update the menu's position.
@@ -49,6 +51,7 @@ class Menu(UIElement):
         self.lock_button.rect.topleft = (x + 10, y + 10)
         self.save_button.rect.topleft = (x + 10, y + 60)
         self.load_button.rect.topleft = (x + 10, y + 110)
+        self.exit_button.rect.topleft = (x + 10, y + 160)
 
     def display(self, screen):
         """
@@ -64,6 +67,7 @@ class Menu(UIElement):
         self.lock_button.display(screen)
         self.save_button.display(screen)
         self.load_button.display(screen)
+        self.exit_button.display(screen)
 
     def toggle(self):
         """
@@ -85,7 +89,7 @@ class Menu(UIElement):
         data.update({
             "type": "Menu",
             "is_active": self.is_active,
-            "children": [self.lock_button.serialize(), self.save_button.serialize(), self.load_button.serialize()]
+            "children": [self.lock_button.serialize(), self.save_button.serialize(), self.load_button.serialize(), self.exit_button.serialize()]
         })
         return data
 
