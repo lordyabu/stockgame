@@ -77,7 +77,12 @@ class Application:
 
         self.graphs = loaded_graphs
 
-    def initialize_projections(self, strategy_dir, num_vals_table):
+    def initialize_projections(self, strategy_dir, num_vals_table_param=None):
+        if num_vals_table_param:
+            num_vals_table = num_vals_table_param
+        else:
+            num_vals_table = config.data_table_num_rows
+
         # Using configurations
         font_graph = pygame.font.SysFont(config.font_graph_name, config.font_graph_size)
 
@@ -115,6 +120,9 @@ class Application:
             graph.add_observer(self.slider)
             self.slider.add_observer(graph)
             self.range_slider.add_observer(graph)
+
+        if config.load_presets:
+            self.load_saved_state()
 
     def handle_mouse_down(self, event):
         dragged_object = None

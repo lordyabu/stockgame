@@ -136,7 +136,7 @@ class Graph(UIElement, Observer, Observable):
         self.color = color  # Graph color.
         self.title_color = darken_color(color)  # Darkened title color.
         self.title = [title, self.title_color]  # Graph title and its color.
-        self.original_title = original_title  # Original title of the graph.
+        self.original_title = title  # Original title of the graph.
         self.data_filename = os.path.basename(data_file) if data_file else None  # Extract filename from data file path.
         self.strategy_name = strategy_name  # Default name for the strategy column.
         self.strategy_active = False  # Flag indicating if the strategy is active.
