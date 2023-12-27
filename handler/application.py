@@ -17,7 +17,7 @@ import sys
 
 class Application:
 
-    def __init__(self, num_vals_table):
+    def __init__(self, num_vals_table, data_name):
         pygame.init()
 
         # Set display to current screen resolution
@@ -29,7 +29,7 @@ class Application:
         pygame.display.set_caption("Resizable Window with Clock and Graphs")
 
         self.GLOBAL_LOCK = False
-        self.initialize_projections('strategy_zero', num_vals_table)
+        self.initialize_projections(data_name, num_vals_table)
 
         self.background_color = (10, 25, 50)
 
@@ -339,7 +339,6 @@ class Application:
 
                 if isinstance(proj, Graph):
                     proj.display(self.screen, self.graphs)
-                    # print('aaaaa')
                     proj.toggle_button_grid.display(self.screen)  # Display the button
                     proj.toggle_button_chart.display(self.screen)
                     proj.toggle_button_strategy.display(self.screen)

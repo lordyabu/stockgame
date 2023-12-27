@@ -6,6 +6,8 @@ font_graph_size = 14
 font_name = "arial"
 font_size = 14
 
+STRATEGY_NAME = 'strategy_zero'
+
 
 # Object configurations
 object_configs = [
@@ -20,14 +22,25 @@ object_configs = [
     },
     {
         "class_name": "Graph",
-        "column": 'Price1',
+        "column": 'Price',
         "kwargs": {
             "is_live": False,
             "size_multiplier": 1.5,
             "color": (100, 100, 100),
-            "title": "Price 1"
+            "title": "Price"
+
         }
     },
+    # {
+    #     "class_name": "Graph",
+    #     "column": 'Price2',
+    #     "kwargs": {
+    #         "is_live": False,
+    #         "size_multiplier": 1.5,
+    #         "color": (100, 1, 100),
+    #         "title": "Price 2"
+    #     }
+    # },
     # ... continue for other Graph instances
 ]
 

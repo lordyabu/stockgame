@@ -1,5 +1,6 @@
 import argparse
 from handler.application import Application
+from config import STRATEGY_NAME
 
 
 def main():
@@ -8,7 +9,7 @@ def main():
 
     args = parser.parse_args()
 
-    app = Application(num_vals_table=args.num_vals_table)
+    app = Application(num_vals_table=args.num_vals_table, data_name=STRATEGY_NAME)
     app.run()
 
 
